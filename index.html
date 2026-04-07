@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Xindus - Canada Rate Calculator</title>
+<link rel="icon" type="image/svg+xml" href="XindusLogo.svg">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --blue-deep:   #0A3D8F; --blue-mid: #1565C0; --blue-bright: #1E88E5;
+  --red: #D32F2F; --gold: #F59E0B; --gold-bright: #FBBF24;
+  --white: #FFFFFF; --snow: #F5F9FF; --ink: #0D1B3E;
+  --ink-70: rgba(13,27,62,.7); --ink-40: rgba(13,27,62,.4); --ink-10: rgba(13,27,62,.08);
+  --border: #D1DCF0; --r8: 8px; --r12: 12px; --r16: 16px; --r24: 24px;
+  --shadow-sm: 0 2px 8px rgba(10,61,143,.12); --shadow-md: 0 6px 24px rgba(10,61,143,.16);
+  --shadow-xl: 0 32px 80px rgba(10,61,143,.28); --ease: cubic-bezier(.4,0,.2,1);
+  --mono: 'JetBrains Mono', monospace; --sans: 'Plus Jakarta Sans', sans-serif;
+}
+
+function applySurcharge() {
+  const val = parseFloat(document.getElementById('admin-surcharge-input').value);
+  if (isNaN(val) || val < 0) { showToast('Enter a valid surcharge amount'); return; }
+  _currentSurcharge = val;
+  document.getElementById('war-surcharge').value = val;
+  // Update display label if visible
+  const dispVal = document.getElementById('surcharge-display-val');
+  if (dispVal) dispVal.textContent = '₹' + val + '/kg';
+  recalcBreakdown();
+  showToast('War surcharge updated to ₹' + val + '/kg');
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);min-height:100vh;background:var(--blue-deep);overflow-x:hidden;}
+.bg-layer{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.bg-layer::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 800px 500px at 10% 15%,rgba(30,136,229,.3) 0%,transparent 60%),radial-gradient(ellipse 500px 400px at 90% 75%,rgba(211,47,47,.2) 0%,transparent 55%),radial-gradient(ellipse 600px 400px at 50% 95%,rgba(245,158,11,.12) 0%,transparent 60%),linear-gradient(160deg,#071E52 0%,#0A3D8F 45%,#071E52 100%);}
+.bg-layer::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 0%,transparent 100%);}
+.orb{position:fixed;border-radius:50%;filter:blur(72px);pointer-events:none;z-index:0;animation:orbDrift 12s ease-in-out infinite alternate;}
+.orb-1{width:380px;height:380px;background:rgba(30,136,229,.2);top:-80px;right:4%;animation-duration:15s;}
+.orb-2{width:280px;height:280px;background:rgba(211,47,47,.15);bottom:8%;left:2%;animation-duration:11s;animation-delay:-4s;}
+.orb-3{width:220px;height:220px;background:rgba(245,158,11,.14);bottom:28%;right:8%;animation-duration:9s;animation-delay:-7s;}
+@keyframes orbDrift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(28px,-18px) scale(1.07);}100%{transform:translate(-14px,22px) scale(.94);}}
+.page{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 16px 60px;}
+.header{width:100%;max-width:860px;padding:32px 0 0;display:flex;flex-direction:column;align-items:center;animation:slideDown .7s var(--ease) both;}
+.logo-img{height:44px;width:auto;object-fit:contain;margin-bottom:14px;}
+.header-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);border-radius:24px;padding:7px 18px;font-size:12px;font-weight:600;color:var(--gold-bright);letter-spacing:.4px;margin-bottom:22px;backdrop-filter:blur(8px);}
+.header-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.7);}50%{box-shadow:0 0 0 6px rgba(245,158,11,0);}}
+.header-title{font-size:clamp(26px,4vw,44px);font-weight:800;color:var(--white);letter-spacing:-1px;line-height:1.15;text-align:center;margin-bottom:10px;}
+.header-title .accent{background:linear-gradient(90deg,var(--gold) 0%,var(--gold-bright) 50%,#FB923C 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header-subtitle{font-size:14.5px;color:rgba(255,255,255,.5);text-align:center;margin-bottom:32px;}
+.card{width:100%;max-width:820px;background:rgba(255,255,255,.97);border-radius:var(--r24);box-shadow:var(--shadow-xl),0 0 0 1px rgba(255,255,255,.15);overflow:hidden;animation:slideUp .75s .12s var(--ease) both;}
+.card-bar{height:5px;background:linear-gradient(90deg,var(--blue-mid) 0%,var(--blue-bright) 30%,var(--red) 55%,#EF4444 72%,var(--gold) 85%,var(--gold-bright) 100%);}
+.card-body{padding:44px 48px 48px;}
+@media(max-width:620px){.card-body{padding:28px 22px 32px;}}
+.section-label{font-size:10px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--blue-mid);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--ink-10);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+@media(max-width:580px){.form-row{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field-label{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--ink-70);display:flex;align-items:center;gap:7px;}
+.input-wrap{position:relative;}
+.form-input{width:100%;padding:13px 16px 13px 44px;border:1.5px solid var(--border);border-radius:var(--r12);font-family:var(--sans);font-size:15px;font-weight:500;color:var(--ink);background:var(--snow);transition:all .2s var(--ease);outline:none;-webkit-appearance:none;appearance:none;}
+.form-input:hover{border-color:#A8C0E8;background:#fff;}
+.form-input:focus{border-color:var(--blue-bright);background:#fff;box-shadow:0 0 0 4px rgba(30,136,229,.12);}
+.form-input.error{border-color:var(--red);box-shadow:0 0 0 4px rgba(211,47,47,.12);}
+.form-input::placeholder{color:#A8BBCC;font-weight:400;}
+.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;}
+.select-wrap{position:relative;}
+.slab-select{width:100%;padding:13px 40px 13px 16px;border:1.5px solid var(--border);border-radius:var(--r12);font-family:var(--sans);font-size:14px;font-weight:500;color:var(--ink);background:var(--snow);transition:all .2s var(--ease);outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;}
+.slab-select:hover{border-color:#A8C0E8;background:#fff;}
+.slab-select:focus{border-color:var(--blue-bright);background:#fff;box-shadow:0 0 0 4px rgba(30,136,229,.12);}
+.slab-select.error{border-color:var(--red);box-shadow:0 0 0 4px rgba(211,47,47,.12);}
+.select-chevron{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:13px;color:var(--ink-40);}
+.ac-wrap{position:relative;}
+.ac-dropdown{position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border:1.5px solid rgba(30,136,229,.25);border-radius:var(--r12);box-shadow:var(--shadow-md);z-index:200;max-height:280px;overflow-y:auto;display:none;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.ac-dropdown.open{display:block;animation:dropIn .18s var(--ease);}
+@keyframes dropIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.ac-item{padding:10px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(13,27,62,.05);transition:background .12s;}
+.ac-item:last-child{border-bottom:none;}
+.ac-item:hover,.ac-item.active{background:rgba(30,136,229,.07);}
+.ac-code{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--ink);}
+.ac-prov{font-size:12px;color:var(--ink-40);margin-left:10px;}
+.ac-zone-tag{font-family:var(--mono);font-size:10px;font-weight:700;background:var(--blue-deep);color:#fff;border-radius:5px;padding:2px 7px;}
+.ac-empty{padding:16px;text-align:center;color:#9AA3AE;font-size:13px;}
+.field-error{font-size:11.5px;color:var(--red);display:none;align-items:center;gap:5px;margin-top:4px;animation:shakeX .3s var(--ease);}
+.field-error.show{display:flex;}
+@keyframes shakeX{0%{transform:translateX(-6px);}35%{transform:translateX(5px);}65%{transform:translateX(-3px);}100%{transform:translateX(0);}}
+.hint{font-size:11px;color:#9AAABB;margin-top:4px;}
+.actions{display:flex;gap:12px;margin-top:24px;}
+.btn-calc{flex:1;padding:16px 24px;background:linear-gradient(135deg,var(--blue-mid) 0%,var(--blue-deep) 100%);color:#fff;border:none;border-radius:var(--r12);font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 6px 20px rgba(10,61,143,.4);transition:all .22s var(--ease);}
+.btn-calc::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);opacity:0;transition:opacity .2s;}
+.btn-calc:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(10,61,143,.5);background:linear-gradient(135deg,var(--blue-bright) 0%,var(--blue-mid) 100%);}
+.btn-calc:hover::before{opacity:1;}
+.btn-calc:active{transform:translateY(0);}
+.btn-calc:disabled{opacity:.65;cursor:not-allowed;transform:none;}
+.btn-inner{display:flex;align-items:center;justify-content:center;gap:9px;}
+.btn-reset{padding:16px 20px;background:transparent;color:var(--ink-70);border:1.5px solid var(--border);border-radius:var(--r12);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-reset:hover{background:var(--snow);border-color:#A8C0E8;color:var(--ink);}
+.btn-booking{display:block;width:100%;padding:16px 24px;margin-top:20px;background:linear-gradient(135deg,var(--blue-mid) 0%,var(--blue-deep) 100%);color:#fff;border:none;border-radius:var(--r12);font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;position:relative;overflow:hidden;text-decoration:none;box-shadow:0 6px 20px rgba(10,61,143,.4);transition:all .22s var(--ease);text-align:center;}
+.btn-booking::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);opacity:0;transition:opacity .2s;}
+.btn-booking:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(10,61,143,.5);background:linear-gradient(135deg,var(--blue-bright) 0%,var(--blue-mid) 100%);}
+.btn-booking:hover::before{opacity:1;}
+.btn-booking:active{transform:translateY(0);}
+.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.divider{border:none;border-top:1.5px dashed var(--border);margin:32px 0;}
+.result{display:none;}
+.result.show{display:block;animation:revealUp .4s var(--ease) both;}
+@keyframes revealUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.result-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.result-title{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);}
+.btn-copy{width:34px;height:34px;border:1.5px solid var(--border);border-radius:var(--r8);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .18s;}
+.btn-copy:hover{background:var(--snow);border-color:#A8C0E8;}
+.btn-copy.copied{background:var(--blue-bright);color:#fff;border-color:var(--blue-bright);}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+@media(max-width:560px){.chips{grid-template-columns:1fr 1fr;}}
+.chip{background:var(--snow);border:1.5px solid var(--border);border-radius:var(--r12);padding:12px 14px;transition:transform .2s,box-shadow .2s;}
+.chip:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm);}
+.chip-label{font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#7A9ABB;margin-bottom:5px;}
+.chip-val{font-size:14px;font-weight:700;color:var(--ink);font-family:var(--mono);}
+.chip-val.red{color:var(--red);}.chip-val.blue{color:var(--blue-mid);}.chip-val.gold{color:var(--gold);}
+.chip.wide{grid-column:span 2;}
+.entry-pill{display:inline-flex;align-items:center;gap:6px;background:var(--blue-deep);color:#fff;padding:3px 10px;border-radius:6px;font-family:var(--mono);font-size:12px;font-weight:600;}
+.pricing{background:var(--snow);border:1.5px solid var(--border);border-radius:var(--r16);overflow:hidden;}
+.price-row{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid #E8EEF8;transition:background .15s;}
+.price-row:hover{background:rgba(30,136,229,.04);}
+.price-label{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-70);font-weight:500;}
+.price-label .dot{width:7px;height:7px;border-radius:50%;background:var(--blue-bright);flex-shrink:0;}
+.price-label .dot.red{background:var(--red);}
+.price-label .dot.gold{background:var(--gold);}
+.price-label .dot.orange{background:#FB923C;}
+.price-val{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--ink);}
+.price-total{display:flex;justify-content:space-between;align-items:center;padding:22px 24px;background:linear-gradient(135deg,var(--blue-deep) 0%,#0D3070 40%,#1A1A6E 100%);position:relative;overflow:hidden;}
+.price-total::after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--gold) 0%,var(--gold-bright) 100%);}
+.total-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.6);}
+.total-val{font-family:var(--mono);font-size:30px;font-weight:700;color:#fff;display:flex;align-items:baseline;gap:4px;}
+.total-currency{font-size:15px;font-weight:500;color:var(--gold-bright);}
+.gst-note{font-size:11px;color:#8AAABB;margin-top:10px;text-align:right;}
+/* War Surcharge */
+.surcharge-section{background:#FFF8E7;border:1.5px solid rgba(245,158,11,.27);border-radius:var(--r12);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.surcharge-section label{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#92400E;white-space:nowrap;}
+.surcharge-input{width:110px;padding:9px 12px;border:1.5px solid rgba(245,158,11,.53);border-radius:var(--r8);font-family:var(--mono);font-size:14px;font-weight:600;color:var(--ink);background:#fff;outline:none;transition:border-color .2s;}
+.surcharge-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.15);}
+.surcharge-hint{font-size:11px;color:#B45309;flex:1;min-width:120px;}
+/* Gross weight */
+.gross-weight-section{background:var(--snow);border:1.5px solid var(--border);border-radius:var(--r12);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.gross-weight-section label{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--ink-70);white-space:nowrap;}
+.gross-weight-input{width:120px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r8);font-family:var(--mono);font-size:14px;font-weight:600;color:var(--ink);background:#fff;outline:none;transition:border-color .2s;}
+.gross-weight-input:focus{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(30,136,229,.12);}
+.gross-weight-hint{font-size:11px;color:var(--ink-40);flex:1;min-width:120px;}
+/* CSB-5 Toggle */
+.csb-toggle-row{display:flex;align-items:center;gap:14px;padding:12px 20px;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:var(--r12);margin-bottom:16px;flex-wrap:wrap;}
+.csb-label{font-size:12px;font-weight:700;color:var(--blue-mid);letter-spacing:.5px;}
+.csb-note{font-size:11px;color:#1E40AF;flex:1;}
+.toggle-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#CBD5E1;border-radius:24px;transition:background .2s;}
+.toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle-switch input:checked + .toggle-slider{background:var(--blue-bright);}
+.toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px);}
+/* Volumetric checker */
+.vol-checker{margin-top:16px;border:1.5px solid var(--border);border-radius:var(--r12);overflow:hidden;}
+.vol-header{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;background:var(--snow);cursor:pointer;user-select:none;font-size:12px;font-weight:700;color:var(--blue-mid);letter-spacing:.4px;transition:background .15s;}
+.vol-header:hover{background:#E8F0FD;}
+.vol-chevron{font-size:12px;transition:transform .22s;}
+.vol-chevron.open{transform:rotate(180deg);}
+.vol-body{display:none;padding:18px 20px;background:#fff;border-top:1px solid var(--border);}
+.vol-body.open{display:block;animation:revealUp .25s var(--ease);}
+.vol-inputs{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.vol-field{display:flex;flex-direction:column;gap:5px;}
+.vol-field label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-70);}
+.vol-input{width:90px;padding:9px 10px;border:1.5px solid var(--border);border-radius:var(--r8);font-family:var(--mono);font-size:14px;font-weight:500;color:var(--ink);background:var(--snow);outline:none;transition:border-color .2s;}
+.vol-input:focus{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(30,136,229,.12);background:#fff;}
+.vol-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+@media(max-width:480px){.vol-result-grid{grid-template-columns:1fr 1fr;}}
+.vol-chip{background:var(--snow);border:1.5px solid var(--border);border-radius:var(--r8);padding:10px 12px;}
+.vol-chip-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7A9ABB;margin-bottom:4px;}
+.vol-chip-val{font-size:13px;font-weight:700;color:var(--ink);font-family:var(--mono);}
+.vol-chip-val.highlight{color:var(--blue-mid);}
+.vol-warning{background:#FEF3C7;border:1.5px solid rgba(245,158,11,.33);border-radius:var(--r8);padding:10px 14px;font-size:12px;color:#92400E;display:none;}
+.vol-warning.show{display:block;}
+.vol-recalc{background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:var(--r8);padding:10px 14px;font-size:12px;color:#1E40AF;display:none;margin-top:10px;}
+.vol-recalc.show{display:block;}
+/* Actual weight */
+.actual-weight-row{background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:var(--r12);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.actual-weight-row label{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#065F46;white-space:nowrap;}
+.actual-weight-input{width:120px;padding:9px 12px;border:1.5px solid #6EE7B7;border-radius:var(--r8);font-family:var(--mono);font-size:14px;font-weight:600;color:var(--ink);background:#fff;outline:none;transition:border-color .2s;}
+.actual-weight-input:focus{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15);}
+.actual-weight-hint{font-size:11px;color:#047857;flex:1;min-width:140px;}
+.actual-weight-tag{font-size:11px;font-weight:600;background:#D1FAE5;color:#059669;border-radius:6px;padding:3px 8px;display:none;}
+/* Footer */
+.footer{margin-top:28px;text-align:center;font-size:12px;color:rgba(255,255,255,.2);position:relative;z-index:1;animation:slideUp .7s .3s var(--ease) both;}
+.admin-link{color:rgba(255,255,255,.12);text-decoration:none;font-size:10px;margin-left:8px;transition:color .2s;}
+.admin-link:hover{color:rgba(255,255,255,.35);}
+/* Toast */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--blue-deep);color:#fff;padding:10px 22px;border-radius:24px;font-size:13px;font-weight:500;border:1px solid rgba(245,158,11,.3);box-shadow:var(--shadow-md);opacity:0;transition:all .28s var(--ease);pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* Admin Modal */
+.admin-overlay{position:fixed;inset:0;z-index:9000;background:rgba(5,15,40,.82);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
+.admin-overlay.open{display:flex;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.admin-modal{background:#fff;border-radius:var(--r24);box-shadow:var(--shadow-xl);width:100%;max-width:560px;overflow:hidden;animation:slideUp .3s var(--ease);}
+.admin-modal-bar{height:4px;background:linear-gradient(90deg,var(--blue-mid),var(--gold));}
+.admin-modal-body{padding:32px 36px 36px;}
+@media(max-width:580px){.admin-modal-body{padding:24px 20px 28px;}}
+.admin-title{font-size:18px;font-weight:800;color:var(--ink);margin-bottom:6px;}
+.admin-subtitle{font-size:12px;color:var(--ink-40);margin-bottom:24px;}
+.admin-field{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
+.admin-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-70);}
+.admin-input{padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r8);font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--snow);outline:none;transition:border-color .2s;}
+.admin-input:focus{border-color:var(--blue-bright);box-shadow:0 0 0 3px rgba(30,136,229,.1);background:#fff;}
+.admin-input.error{border-color:var(--red);}
+.admin-err{font-size:11.5px;color:var(--red);display:none;margin-top:4px;}
+.admin-err.show{display:block;}
+.admin-actions{display:flex;gap:10px;margin-top:4px;}
+.btn-admin-login{flex:1;padding:12px 20px;background:linear-gradient(135deg,var(--blue-mid),var(--blue-deep));color:#fff;border:none;border-radius:var(--r8);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-admin-login:hover{background:linear-gradient(135deg,var(--blue-bright),var(--blue-mid));}
+.btn-admin-cancel{padding:12px 18px;background:transparent;color:var(--ink-70);border:1.5px solid var(--border);border-radius:var(--r8);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-admin-cancel:hover{background:var(--snow);}
+.admin-panel{display:none;}
+.admin-panel.open{display:block;}
+.admin-section-title{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue-mid);margin-bottom:12px;margin-top:20px;display:flex;align-items:center;gap:8px;}
+.admin-section-title::after{content:'';flex:1;height:1px;background:var(--ink-10);}
+.admin-textarea{width:100%;height:160px;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r8);font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--snow);outline:none;resize:vertical;transition:border-color .2s;}
+.admin-textarea:focus{border-color:var(--blue-bright);background:#fff;box-shadow:0 0 0 3px rgba(30,136,229,.1);}
+.admin-upload-row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+.btn-admin-apply{padding:10px 20px;background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;border-radius:var(--r8);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-admin-apply:hover{background:linear-gradient(135deg,#10B981,#059669);}
+.btn-admin-reset-rates{padding:10px 16px;background:transparent;color:var(--red);border:1.5px solid #FCA5A5;border-radius:var(--r8);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-admin-reset-rates:hover{background:#FEF2F2;}
+.admin-status{font-size:12px;padding:8px 12px;border-radius:var(--r8);display:none;margin-top:10px;}
+.admin-status.success{background:#D1FAE5;color:#065F46;display:block;}
+.admin-status.error{background:#FEE2E2;color:#991B1B;display:block;}
+.custom-rates-indicator{display:inline-flex;align-items:center;gap:6px;background:#D1FAE5;color:#065F46;font-size:10px;font-weight:700;letter-spacing:.5px;border-radius:6px;padding:3px 9px;margin-left:8px;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+
+/* Surcharge display (read-only) */
+.surcharge-section{display:flex;align-items:center;gap:10px;background:#FEF3C7;border:1.5px solid #FDE68A;border-radius:var(--r12);padding:12px 16px;margin-bottom:14px;}
+.surcharge-label-icon{font-size:18px;}
+.surcharge-label-text{font-size:13px;color:#92400E;font-weight:500;}
+.surcharge-label-text strong{color:#B45309;}
+/* CSB toggle row - always show */
+.csb-toggle-row{display:flex;align-items:center;gap:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:var(--r12);padding:12px 16px;margin-bottom:14px;}
+.csb-label{font-size:13px;font-weight:600;color:#065F46;}
+.csb-note{font-size:11px;color:#059669;flex:1;}
+.toggle-switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:#CBD5E1;border-radius:22px;transition:.25s;}
+.toggle-slider::before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s;}
+.toggle-switch input:checked + .toggle-slider{background:#10B981;}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px);}
+/* Breakdown toggle row */
+.breakdown-toggle-row{cursor:pointer;background:#F0F7FF;border-top:1px solid #E0EBFA;}
+.breakdown-toggle-row:hover{background:#E0EBFA;}
+/* Admin surcharge row */
+.admin-surcharge-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+<div class="page">
+  <header class="header">
+    <img class="logo-img" src="Logo.svg" alt="Xindus Logo"/>
+    <div class="header-badge"><span class="dot"></span>Canada is now Live with Xindus Lite</div>
+    <h1 class="header-title">Canada Shipping<br/><span class="accent">Rate Calculator</span></h1>
+    <p class="header-subtitle">Rates are available across all provinces &amp; territories</p>
+  </header>
+  <div class="card">
+    <div class="card-bar"></div>
+    <div class="card-body">
+      <div class="section-label">&#128230; Shipment Details <span id="custom-rates-badge" class="custom-rates-indicator" style="display:none">&#10003; Custom Rates Active</span></div>
+      <div class="actual-weight-row">
+        <label for="actual-weight">&#9878;&#65039; Actual Weight (kg)</label>
+        <input type="number" id="actual-weight" class="actual-weight-input" placeholder="e.g. 12.5" min="0" step="0.01" oninput="autoSelectSlab(this.value)"/>
+        <span class="actual-weight-hint">Enter weight to auto-select slab</span>
+        <span class="actual-weight-tag" id="actual-weight-tag"></span>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label class="field-label">&#128205; Destination FSA</label>
+          <div class="ac-wrap">
+            <div class="input-wrap">
+              <input id="fsa" class="form-input" type="text" placeholder="e.g. M5V, V6B, K1A" maxlength="3" autocomplete="off" spellcheck="false"/>
+              <span class="input-icon">&#128269;</span>
+            </div>
+            <div class="ac-dropdown" id="ac-list" role="listbox"></div>
+          </div>
+          <span class="hint">First 3 characters of Canadian postal code</span>
+          <div class="field-error" id="fsa-err">&#9888; Please select a valid FSA from suggestions</div>
+        </div>
+        <div class="field">
+          <label class="field-label">&#9878;&#65039; Weight Slab</label>
+          <div class="select-wrap">
+            <select class="slab-select" id="slab-select"><option value="">&#8212; Select weight range &#8212;</option></select>
+            <span class="select-chevron">&#9662;</span>
+          </div>
+          <span class="hint">Choose the weight bracket for your shipment</span>
+          <div class="field-error" id="slab-err">&#9888; Please select a weight slab</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-calc" id="calc-btn" onclick="calculate()">
+          <span class="btn-inner" id="btn-text"><span>&#127464;&#127462;</span><span>Get Shipping Rate</span></span>
+        </button>
+        <button class="btn-reset" onclick="resetForm()">&#8634; Reset</button>
+      </div>
+      <div class="result" id="result">
+        <hr class="divider"/>
+        <div class="result-header">
+          <span class="result-title">&#128202; Rate Breakdown</span>
+          <button class="btn-copy" id="copy-btn" onclick="copyResult()" title="Copy result">&#128203;</button>
+        </div>
+        <div class="chips">
+          <div class="chip"><div class="chip-label">Zone</div><div class="chip-val red" id="r-zone">&#8212;</div></div>
+          <div class="chip"><div class="chip-label">Province</div><div class="chip-val" id="r-prov">&#8212;</div></div>
+          <div class="chip"><div class="chip-label">Entry Airport</div><div class="chip-val blue" id="r-entry">&#8212;</div></div>
+          <div class="chip wide"><div class="chip-label">Weight Slab Applied</div><div class="chip-val" id="r-slab">&#8212;</div></div>
+        </div>
+        <div class="surcharge-section" id="surcharge-display-row" style="display:none">
+          <span class="surcharge-label-icon">&#128737;</span>
+          <span class="surcharge-label-text">War Surcharge: <strong id="surcharge-display-val">&#8377;75/kg</strong> applied</span>
+        </div>
+        <!-- hidden input so JS can still read value -->
+        <input type="hidden" id="war-surcharge" value="75"/>
+        
+        <div class="csb-toggle-row" id="csb-toggle-row" style="display:none">
+          <span class="csb-label">CSB-5 Shipment</span>
+          <label class="toggle-switch"><input type="checkbox" id="csb-toggle" onchange="recalcBreakdown()"/><span class="toggle-slider"></span></label>
+          <span class="csb-note">* For CSB-5 shipments, &#8377;50 extra clearance charge applies</span>
+        </div>
+        <div class="pricing" id="pricing-box">
+          <div class="breakdown-rows" id="breakdown-rows" style="display:none">
+            <div class="price-row" id="row-rate-per-kg" style="display:none">
+              <span class="price-label"><span class="dot"></span>Rate per kg</span>
+              <span class="price-val" id="r-rate-per-kg">&#8377;0.00</span>
+            </div>
+            <div class="price-row" id="row-base">
+              <span class="price-label" id="base-label"><span class="dot"></span>Base Freight Rate</span>
+              <span class="price-val" id="r-base">&#8377;0.00</span>
+            </div>
+            <div class="price-row" id="row-war">
+              <span class="price-label"><span class="dot gold"></span>War Surcharge</span>
+              <span class="price-val" id="r-war">&#8377;0.00</span>
+            </div>
+            <div class="price-row" id="row-csb" style="display:none">
+              <span class="price-label"><span class="dot orange"></span>CSB-5 Clearance</span>
+              <span class="price-val" id="r-csb">&#8377;50.00</span>
+            </div>
+            <div class="price-row" id="row-subtotal" style="display:none">
+              <span class="price-label"><span class="dot"></span>Sub-total</span>
+              <span class="price-val" id="r-subtotal">&#8377;0.00</span>
+            </div>
+            <div class="price-row">
+              <span class="price-label"><span class="dot red"></span>GST (18%)</span>
+              <span class="price-val" id="r-gst">&#8377;0.00</span>
+            </div>
+          </div>
+          <div class="price-row breakdown-toggle-row" onclick="toggleBreakdown()">
+            <span class="price-label" style="color:var(--blue-mid);font-weight:600;cursor:pointer;">&#128269; <span id="breakdown-toggle-label">See Breakdown</span></span>
+            <span style="color:var(--blue-mid);font-size:12px;" id="breakdown-chevron">&#9660;</span>
+          </div>
+          <div class="price-total">
+            <span class="total-label">&#128176; Total Payable</span>
+            <span class="total-val"><span class="total-currency">&#8377;</span><span id="r-total">0</span></span>
+          </div>
+        </div>
+        <div class="vol-checker" id="vol-checker" style="display:none">
+          <div class="vol-header" onclick="toggleVolChecker()">
+            <span>&#128208; Check if going Volumetric</span>
+            <span class="vol-chevron" id="vol-chevron">&#9662;</span>
+          </div>
+          <div class="vol-body" id="vol-body">
+            <div class="vol-inputs">
+              <div class="vol-field"><label for="vol-l">Length (cm)</label><input type="number" id="vol-l" class="vol-input" placeholder="L" min="0" step="0.1" oninput="calcVolumetric()"/></div>
+              <div class="vol-field"><label for="vol-b">Breadth (cm)</label><input type="number" id="vol-b" class="vol-input" placeholder="B" min="0" step="0.1" oninput="calcVolumetric()"/></div>
+              <div class="vol-field"><label for="vol-h">Height (cm)</label><input type="number" id="vol-h" class="vol-input" placeholder="H" min="0" step="0.1" oninput="calcVolumetric()"/></div>
+            </div>
+            <div class="vol-result-grid" id="vol-result-grid" style="display:none">
+              <div class="vol-chip"><div class="vol-chip-label">Gross Weight</div><div class="vol-chip-val" id="vol-gross-disp">&#8212;</div></div>
+              <div class="vol-chip"><div class="vol-chip-label">Volumetric Wt.</div><div class="vol-chip-val" id="vol-vol-disp">&#8212;</div></div>
+              <div class="vol-chip"><div class="vol-chip-label">Chargeable Wt.</div><div class="vol-chip-val highlight" id="vol-charge-disp">&#8212;</div></div>
+            </div>
+            <div class="vol-warning" id="vol-warning">&#9888;&#65039; Volumetric weight exceeds gross weight. Chargeable weight is <strong id="vol-charge-bold">&#8212;</strong> kg.</div>
+            <div class="vol-recalc" id="vol-recalc">&#8505;&#65039; Recalculated rate using chargeable weight: <strong id="vol-recalc-val">&#8212;</strong> &middot; Total Payable: <strong id="vol-recalc-total">&#8212;</strong></div>
+          </div>
+        </div>
+        <a href="https://one.xindus.net/new-booking" class="btn-booking" target="_blank" rel="noopener noreferrer">
+          <span class="btn-inner"><span>&#128230;</span><span>Book Shipment</span></span>
+        </a>
+        <p class="gst-note" id="gst-note">* GST @ 18% applicable &middot; Rates above 5 kg are per kg</p>
+      </div>
+    </div>
+  </div>
+  <footer class="footer">
+    <p>&#169; 2026 All Rights Reserved by Xindus &middot; Canada Lite Rate Calculator &middot; <a class="admin-link" href="#" onclick="openAdminModal();return false;">Admin</a></p>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+<div class="admin-overlay" id="admin-overlay">
+  <div class="admin-modal">
+    <div class="admin-modal-bar"></div>
+    <div class="admin-modal-body">
+      <div id="admin-login-form">
+        <div class="admin-title">&#128274; Admin Panel</div>
+        <div class="admin-subtitle">Enter credentials to manage rate settings</div>
+        <div class="admin-field"><label class="admin-label">Admin ID</label><input type="text" id="admin-id" class="admin-input" placeholder="Admin ID" autocomplete="off"/></div>
+        <div class="admin-field"><label class="admin-label">Password</label><input type="password" id="admin-pass" class="admin-input" placeholder="Password"/><div class="admin-err" id="admin-login-err">&#9888; Invalid credentials. Please try again.</div></div>
+        <div class="admin-actions"><button class="btn-admin-login" onclick="adminLogin()">Login</button><button class="btn-admin-cancel" onclick="closeAdminModal()">Cancel</button></div>
+      </div>
+      <div class="admin-panel" id="admin-panel">
+        <div class="admin-title">&#9881;&#65039; Rate Management</div>
+        <div class="admin-subtitle">Modify rates or upload a JSON file to override the default RATE_CARD</div>
+        <div class="admin-section-title">Upload JSON Rates File</div>
+        <div class="admin-upload-row"><input type="file" id="admin-file-input" accept=".json" onchange="handleAdminFileUpload(event)" style="font-size:12px;color:var(--ink-70)"/></div>
+        <div class="admin-section-title">&#128737; War Surcharge Control</div>
+        <div class="admin-surcharge-row">
+          <label class="admin-label">Surcharge Rate (₹/kg)</label>
+          <input type="number" id="admin-surcharge-input" class="admin-input" style="max-width:140px" value="75" min="0" step="0.5"/>
+          <button class="btn-admin-apply" onclick="applySurcharge()">&#10003; Apply</button>
+        </div>
+        <div class="admin-section-title" style="margin-top:20px">Edit RATE_CARD JSON Directly</div>
+        <div style="display:none"><!-- spacer --></div>
+        
+        <textarea class="admin-textarea" id="admin-json-editor" placeholder="Paste or edit RATE_CARD JSON here..."></textarea>
+        <div id="admin-status" class="admin-status"></div>
+        <div class="admin-upload-row" style="margin-top:12px">
+          <button class="btn-admin-apply" onclick="applyCustomRates()">&#10003; Apply Rates</button>
+          <button class="btn-admin-reset-rates" onclick="resetToDefaultRates()">&#10005; Reset to Default</button>
+          <button class="btn-admin-cancel" onclick="closeAdminModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const ZONE_MAP = {"A0A":{"zone":"D13","province":"NL","entry":"YYZ"},"A0B":{"zone":"D13","province":"NL","entry":"YYZ"},"A0C":{"zone":"D13","province":"NL","entry":"YYZ"},"A0E":{"zone":"D13","province":"NL","entry":"YYZ"},"A0G":{"zone":"D13","province":"NL","entry":"YYZ"},"A0H":{"zone":"D13","province":"NL","entry":"YYZ"},"A0J":{"zone":"D13","province":"NL","entry":"YYZ"},"A0K":{"zone":"D13","province":"NL","entry":"YYZ"},"A0L":{"zone":"D13","province":"NL","entry":"YYZ"},"A0M":{"zone":"D13","province":"NL","entry":"YYZ"},"A0N":{"zone":"D13","province":"NL","entry":"YYZ"},"A0P":{"zone":"D13","province":"NL","entry":"YYZ"},"A0R":{"zone":"D13","province":"NL","entry":"YYZ"},"A1A":{"zone":"D11","province":"NL","entry":"YYZ"},"A1B":{"zone":"D11","province":"NL","entry":"YYZ"},"A1C":{"zone":"D11","province":"NL","entry":"YYZ"},"A1E":{"zone":"D11","province":"NL","entry":"YYZ"},"A1G":{"zone":"D11","province":"NL","entry":"YYZ"},"A1H":{"zone":"D13","province":"NL","entry":"YYZ"},"A1K":{"zone":"D13","province":"NL","entry":"YYZ"},"A1L":{"zone":"D13","province":"NL","entry":"YYZ"},"A1M":{"zone":"D13","province":"NL","entry":"YYZ"},"A1N":{"zone":"D11","province":"NL","entry":"YYZ"},"A1S":{"zone":"D13","province":"NL","entry":"YYZ"},"A1V":{"zone":"D13","province":"NL","entry":"YYZ"},"A1W":{"zone":"D13","province":"NL","entry":"YYZ"},"A1X":{"zone":"D13","province":"NL","entry":"YYZ"},"A1Y":{"zone":"D13","province":"NL","entry":"YYZ"},"A2A":{"zone":"D13","province":"NL","entry":"YYZ"},"A2B":{"zone":"D13","province":"NL","entry":"YYZ"},"A2H":{"zone":"D13","province":"NL","entry":"YYZ"},"A2N":{"zone":"D13","province":"NL","entry":"YYZ"},"A2V":{"zone":"D13","province":"NL","entry":"YYZ"},"A5A":{"zone":"D13","province":"NL","entry":"YYZ"},"A8A":{"zone":"D13","province":"NL","entry":"YYZ"},"B0C":{"zone":"D11","province":"NS","entry":"YYZ"},"B0E":{"zone":"D11","province":"NS","entry":"YYZ"},"B0H":{"zone":"D10","province":"NS","entry":"YYZ"},"B0J":{"zone":"D10","province":"NS","entry":"YYZ"},"B0K":{"zone":"D10","province":"NS","entry":"YYZ"},"B0L":{"zone":"D10","province":"NS","entry":"YYZ"},"B0M":{"zone":"D10","province":"NS","entry":"YYZ"},"B0N":{"zone":"D10","province":"NS","entry":"YYZ"},"B0P":{"zone":"D10","province":"NS","entry":"YYZ"},"B0R":{"zone":"D10","province":"NS","entry":"YYZ"},"B0S":{"zone":"D10","province":"NS","entry":"YYZ"},"B0T":{"zone":"D10","province":"NS","entry":"YYZ"},"B0V":{"zone":"D10","province":"NS","entry":"YYZ"},"B0W":{"zone":"D10","province":"NS","entry":"YYZ"},"B1A":{"zone":"D11","province":"NS","entry":"YYZ"},"B1B":{"zone":"D11","province":"NS","entry":"YYZ"},"B1C":{"zone":"D11","province":"NS","entry":"YYZ"},"B1E":{"zone":"D11","province":"NS","entry":"YYZ"},"B1G":{"zone":"D11","province":"NS","entry":"YYZ"},"B1H":{"zone":"D11","province":"NS","entry":"YYZ"},"B1J":{"zone":"D11","province":"NS","entry":"YYZ"},"B1K":{"zone":"D11","province":"NS","entry":"YYZ"},"B1L":{"zone":"D11","province":"NS","entry":"YYZ"},"B1M":{"zone":"D11","province":"NS","entry":"YYZ"},"B1N":{"zone":"D11","province":"NS","entry":"YYZ"},"B1P":{"zone":"D11","province":"NS","entry":"YYZ"},"B1R":{"zone":"D11","province":"NS","entry":"YYZ"},"B1S":{"zone":"D11","province":"NS","entry":"YYZ"},"B1T":{"zone":"D11","province":"NS","entry":"YYZ"},"B1V":{"zone":"D11","province":"NS","entry":"YYZ"},"B1W":{"zone":"D11","province":"NS","entry":"YYZ"},"B1X":{"zone":"D11","province":"NS","entry":"YYZ"},"B1Y":{"zone":"D11","province":"NS","entry":"YYZ"},"B2A":{"zone":"D11","province":"NS","entry":"YYZ"},"B2C":{"zone":"D11","province":"NS","entry":"YYZ"},"B2E":{"zone":"D11","province":"NS","entry":"YYZ"},"B2G":{"zone":"D10","province":"NS","entry":"YYZ"},"B2H":{"zone":"D10","province":"NS","entry":"YYZ"},"B2J":{"zone":"D11","province":"NS","entry":"YYZ"},"B2N":{"zone":"D10","province":"NS","entry":"YYZ"},"B2R":{"zone":"D09","province":"NS","entry":"YYZ"},"B2S":{"zone":"D10","province":"NS","entry":"YYZ"},"B2T":{"zone":"D09","province":"NS","entry":"YYZ"},"B2V":{"zone":"D09","province":"NS","entry":"YYZ"},"B2W":{"zone":"D09","province":"NS","entry":"YYZ"},"B2X":{"zone":"D09","province":"NS","entry":"YYZ"},"B2Y":{"zone":"D09","province":"NS","entry":"YYZ"},"B2Z":{"zone":"D09","province":"NS","entry":"YYZ"},"B3A":{"zone":"D09","province":"NS","entry":"YYZ"},"B3B":{"zone":"D09","province":"NS","entry":"YYZ"},"B3E":{"zone":"D10","province":"NS","entry":"YYZ"},"B3G":{"zone":"D09","province":"NS","entry":"YYZ"},"B3H":{"zone":"D09","province":"NS","entry":"YYZ"},"B3J":{"zone":"D09","province":"NS","entry":"YYZ"},"B3K":{"zone":"D09","province":"NS","entry":"YYZ"},"B3L":{"zone":"D09","province":"NS","entry":"YYZ"},"B3M":{"zone":"D09","province":"NS","entry":"YYZ"},"B3N":{"zone":"D09","province":"NS","entry":"YYZ"},"B3P":{"zone":"D09","province":"NS","entry":"YYZ"},"B3R":{"zone":"D09","province":"NS","entry":"YYZ"},"B3S":{"zone":"D09","province":"NS","entry":"YYZ"},"B3T":{"zone":"D09","province":"NS","entry":"YYZ"},"B3V":{"zone":"D09","province":"NS","entry":"YYZ"},"B3Z":{"zone":"D10","province":"NS","entry":"YYZ"},"B4A":{"zone":"D09","province":"NS","entry":"YYZ"},"B4B":{"zone":"D09","province":"NS","entry":"YYZ"},"B4C":{"zone":"D09","province":"NS","entry":"YYZ"},"B4E":{"zone":"D09","province":"NS","entry":"YYZ"},"B4G":{"zone":"D09","province":"NS","entry":"YYZ"},"B4H":{"zone":"D10","province":"NS","entry":"YYZ"},"B4N":{"zone":"D10","province":"NS","entry":"YYZ"},"B4P":{"zone":"D10","province":"NS","entry":"YYZ"},"B4R":{"zone":"D10","province":"NS","entry":"YYZ"},"B4V":{"zone":"D10","province":"NS","entry":"YYZ"},"B5A":{"zone":"D10","province":"NS","entry":"YYZ"},"B6L":{"zone":"D10","province":"NS","entry":"YYZ"},"B9A":{"zone":"D10","province":"NS","entry":"YYZ"},"C0A":{"zone":"D10","province":"PE","entry":"YYZ"},"C0B":{"zone":"D10","province":"PE","entry":"YYZ"},"C1A":{"zone":"D10","province":"PE","entry":"YYZ"},"C1B":{"zone":"D10","province":"PE","entry":"YYZ"},"C1C":{"zone":"D10","province":"PE","entry":"YYZ"},"C1E":{"zone":"D10","province":"PE","entry":"YYZ"},"C1N":{"zone":"D10","province":"PE","entry":"YYZ"},"E1A":{"zone":"D10","province":"NB","entry":"YYZ"},"E1B":{"zone":"D10","province":"NB","entry":"YYZ"},"E1C":{"zone":"D10","province":"NB","entry":"YYZ"},"E1E":{"zone":"D10","province":"NB","entry":"YYZ"},"E1G":{"zone":"D10","province":"NB","entry":"YYZ"},"E1H":{"zone":"D10","province":"NB","entry":"YYZ"},"E1J":{"zone":"D10","province":"NB","entry":"YYZ"},"E1N":{"zone":"D10","province":"NB","entry":"YYZ"},"E1V":{"zone":"D10","province":"NB","entry":"YYZ"},"E1W":{"zone":"D10","province":"NB","entry":"YYZ"},"E1X":{"zone":"D10","province":"NB","entry":"YYZ"},"E2A":{"zone":"D10","province":"NB","entry":"YYZ"},"E2E":{"zone":"D10","province":"NB","entry":"YYZ"},"E2G":{"zone":"D10","province":"NB","entry":"YYZ"},"E2H":{"zone":"D10","province":"NB","entry":"YYZ"},"E2J":{"zone":"D10","province":"NB","entry":"YYZ"},"E2K":{"zone":"D10","province":"NB","entry":"YYZ"},"E2L":{"zone":"D10","province":"NB","entry":"YYZ"},"E2M":{"zone":"D10","province":"NB","entry":"YYZ"},"E2N":{"zone":"D10","province":"NB","entry":"YYZ"},"E2P":{"zone":"D10","province":"NB","entry":"YYZ"},"E2R":{"zone":"D10","province":"NB","entry":"YYZ"},"E2S":{"zone":"D10","province":"NB","entry":"YYZ"},"E2V":{"zone":"D10","province":"NB","entry":"YYZ"},"E3A":{"zone":"D10","province":"NB","entry":"YYZ"},"E3B":{"zone":"D10","province":"NB","entry":"YYZ"},"E3C":{"zone":"D10","province":"NB","entry":"YYZ"},"E3E":{"zone":"D10","province":"NB","entry":"YYZ"},"E3G":{"zone":"D10","province":"NB","entry":"YYZ"},"E3L":{"zone":"D10","province":"NB","entry":"YYZ"},"E3N":{"zone":"D10","province":"NB","entry":"YYZ"},"E3V":{"zone":"D10","province":"NB","entry":"YYZ"},"E3Y":{"zone":"D10","province":"NB","entry":"YYZ"},"E3Z":{"zone":"D10","province":"NB","entry":"YYZ"},"E4A":{"zone":"D10","province":"NB","entry":"YYZ"},"E4B":{"zone":"D10","province":"NB","entry":"YYZ"},"E4C":{"zone":"D10","province":"NB","entry":"YYZ"},"E4E":{"zone":"D10","province":"NB","entry":"YYZ"},"E4G":{"zone":"D10","province":"NB","entry":"YYZ"},"E4H":{"zone":"D10","province":"NB","entry":"YYZ"},"E4J":{"zone":"D10","province":"NB","entry":"YYZ"},"E4K":{"zone":"D10","province":"NB","entry":"YYZ"},"E4L":{"zone":"D10","province":"NB","entry":"YYZ"},"E4M":{"zone":"D10","province":"NB","entry":"YYZ"},"E4N":{"zone":"D10","province":"NB","entry":"YYZ"},"E4P":{"zone":"D10","province":"NB","entry":"YYZ"},"E4R":{"zone":"D10","province":"NB","entry":"YYZ"},"E4S":{"zone":"D10","province":"NB","entry":"YYZ"},"E4T":{"zone":"D10","province":"NB","entry":"YYZ"},"E4V":{"zone":"D10","province":"NB","entry":"YYZ"},"E4W":{"zone":"D10","province":"NB","entry":"YYZ"},"E4X":{"zone":"D10","province":"NB","entry":"YYZ"},"E4Y":{"zone":"D10","province":"NB","entry":"YYZ"},"E4Z":{"zone":"D10","province":"NB","entry":"YYZ"},"E5A":{"zone":"D10","province":"NB","entry":"YYZ"},"E5B":{"zone":"D10","province":"NB","entry":"YYZ"},"E5C":{"zone":"D10","province":"NB","entry":"YYZ"},"E5E":{"zone":"D10","province":"NB","entry":"YYZ"},"E5G":{"zone":"D10","province":"NB","entry":"YYZ"},"E5H":{"zone":"D10","province":"NB","entry":"YYZ"},"E5J":{"zone":"D10","province":"NB","entry":"YYZ"},"E5K":{"zone":"D10","province":"NB","entry":"YYZ"},"E5L":{"zone":"D10","province":"NB","entry":"YYZ"},"E5M":{"zone":"D10","province":"NB","entry":"YYZ"},"E5N":{"zone":"D10","province":"NB","entry":"YYZ"},"E5P":{"zone":"D10","province":"NB","entry":"YYZ"},"E5R":{"zone":"D10","province":"NB","entry":"YYZ"},"E5S":{"zone":"D10","province":"NB","entry":"YYZ"},"E5T":{"zone":"D10","province":"NB","entry":"YYZ"},"E5V":{"zone":"D10","province":"NB","entry":"YYZ"},"E6A":{"zone":"D10","province":"NB","entry":"YYZ"},"E6B":{"zone":"D10","province":"NB","entry":"YYZ"},"E6C":{"zone":"D10","province":"NB","entry":"YYZ"},"E6E":{"zone":"D10","province":"NB","entry":"YYZ"},"E6G":{"zone":"D10","province":"NB","entry":"YYZ"},"E6H":{"zone":"D10","province":"NB","entry":"YYZ"},"E6J":{"zone":"D10","province":"NB","entry":"YYZ"},"E6K":{"zone":"D10","province":"NB","entry":"YYZ"},"E6L":{"zone":"D10","province":"NB","entry":"YYZ"},"E7A":{"zone":"D10","province":"NB","entry":"YYZ"},"E7B":{"zone":"D10","province":"NB","entry":"YYZ"},"E7C":{"zone":"D10","province":"NB","entry":"YYZ"},"E7E":{"zone":"D10","province":"NB","entry":"YYZ"},"E7G":{"zone":"D10","province":"NB","entry":"YYZ"},"E7H":{"zone":"D10","province":"NB","entry":"YYZ"},"E7J":{"zone":"D10","province":"NB","entry":"YYZ"},"E7K":{"zone":"D10","province":"NB","entry":"YYZ"},"E7L":{"zone":"D10","province":"NB","entry":"YYZ"},"E7M":{"zone":"D10","province":"NB","entry":"YYZ"},"E7N":{"zone":"D10","province":"NB","entry":"YYZ"},"E7P":{"zone":"D10","province":"NB","entry":"YYZ"},"E8A":{"zone":"D10","province":"NB","entry":"YYZ"},"E8B":{"zone":"D10","province":"NB","entry":"YYZ"},"E8C":{"zone":"D10","province":"NB","entry":"YYZ"},"E8E":{"zone":"D10","province":"NB","entry":"YYZ"},"E8G":{"zone":"D10","province":"NB","entry":"YYZ"},"E8J":{"zone":"D10","province":"NB","entry":"YYZ"},"E8K":{"zone":"D10","province":"NB","entry":"YYZ"},"E8L":{"zone":"D10","province":"NB","entry":"YYZ"},"E8M":{"zone":"D10","province":"NB","entry":"YYZ"},"E8N":{"zone":"D10","province":"NB","entry":"YYZ"},"E8P":{"zone":"D10","province":"NB","entry":"YYZ"},"E8R":{"zone":"D10","province":"NB","entry":"YYZ"},"E8S":{"zone":"D10","province":"NB","entry":"YYZ"},"E8T":{"zone":"D10","province":"NB","entry":"YYZ"},"E9A":{"zone":"D10","province":"NB","entry":"YYZ"},"E9B":{"zone":"D10","province":"NB","entry":"YYZ"},"E9C":{"zone":"D10","province":"NB","entry":"YYZ"},"E9E":{"zone":"D10","province":"NB","entry":"YYZ"},"E9G":{"zone":"D10","province":"NB","entry":"YYZ"},"E9H":{"zone":"D10","province":"NB","entry":"YYZ"},"G0A":{"zone":"D08","province":"QC","entry":"YYZ"},"G0C":{"zone":"D10","province":"QC","entry":"YYZ"},"G0E":{"zone":"D10","province":"QC","entry":"YYZ"},"G0G":{"zone":"D10","province":"QC","entry":"YYZ"},"G0H":{"zone":"D10","province":"QC","entry":"YYZ"},"G0J":{"zone":"D10","province":"QC","entry":"YYZ"},"G0K":{"zone":"D10","province":"QC","entry":"YYZ"},"G0L":{"zone":"D10","province":"QC","entry":"YYZ"},"G0M":{"zone":"D06","province":"QC","entry":"YYZ"},"G0N":{"zone":"D06","province":"QC","entry":"YYZ"},"G0P":{"zone":"D06","province":"QC","entry":"YYZ"},"G0R":{"zone":"D06","province":"QC","entry":"YYZ"},"G0S":{"zone":"D06","province":"QC","entry":"YYZ"},"G0T":{"zone":"D10","province":"QC","entry":"YYZ"},"G0V":{"zone":"D10","province":"QC","entry":"YYZ"},"G0W":{"zone":"D10","province":"QC","entry":"YYZ"},"G0X":{"zone":"D08","province":"QC","entry":"YYZ"},"G0Y":{"zone":"D06","province":"QC","entry":"YYZ"},"G0Z":{"zone":"D06","province":"QC","entry":"YYZ"},"G1A":{"zone":"D04","province":"QC","entry":"YYZ"},"G1B":{"zone":"D04","province":"QC","entry":"YYZ"},"G1C":{"zone":"D04","province":"QC","entry":"YYZ"},"G1E":{"zone":"D04","province":"QC","entry":"YYZ"},"G1G":{"zone":"D04","province":"QC","entry":"YYZ"},"G1H":{"zone":"D04","province":"QC","entry":"YYZ"},"G1J":{"zone":"D04","province":"QC","entry":"YYZ"},"G1K":{"zone":"D04","province":"QC","entry":"YYZ"},"G1L":{"zone":"D04","province":"QC","entry":"YYZ"},"G1M":{"zone":"D04","province":"QC","entry":"YYZ"},"G1N":{"zone":"D04","province":"QC","entry":"YYZ"},"G1P":{"zone":"D04","province":"QC","entry":"YYZ"},"G1R":{"zone":"D04","province":"QC","entry":"YYZ"},"G1S":{"zone":"D04","province":"QC","entry":"YYZ"},"G1T":{"zone":"D04","province":"QC","entry":"YYZ"},"G1V":{"zone":"D04","province":"QC","entry":"YYZ"},"G1W":{"zone":"D04","province":"QC","entry":"YYZ"},"G1X":{"zone":"D04","province":"QC","entry":"YYZ"},"G1Y":{"zone":"D04","province":"QC","entry":"YYZ"},"G2A":{"zone":"D04","province":"QC","entry":"YYZ"},"G2B":{"zone":"D04","province":"QC","entry":"YYZ"},"G2C":{"zone":"D04","province":"QC","entry":"YYZ"},"G2E":{"zone":"D04","province":"QC","entry":"YYZ"},"G2G":{"zone":"D04","province":"QC","entry":"YYZ"},"G2J":{"zone":"D04","province":"QC","entry":"YYZ"},"G2K":{"zone":"D04","province":"QC","entry":"YYZ"},"G2L":{"zone":"D04","province":"QC","entry":"YYZ"},"G2M":{"zone":"D04","province":"QC","entry":"YYZ"},"G2N":{"zone":"D04","province":"QC","entry":"YYZ"},"G3A":{"zone":"D04","province":"QC","entry":"YYZ"},"G3B":{"zone":"D06","province":"QC","entry":"YYZ"},"G3C":{"zone":"D08","province":"QC","entry":"YYZ"},"G3E":{"zone":"D04","province":"QC","entry":"YYZ"},"G3G":{"zone":"D04","province":"QC","entry":"YYZ"},"G3H":{"zone":"D06","province":"QC","entry":"YYZ"},"G3J":{"zone":"D04","province":"QC","entry":"YYZ"},"G3K":{"zone":"D04","province":"QC","entry":"YYZ"},"G3L":{"zone":"D06","province":"QC","entry":"YYZ"},"G3M":{"zone":"D06","province":"QC","entry":"YYZ"},"G3N":{"zone":"D08","province":"QC","entry":"YYZ"},"G3S":{"zone":"D08","province":"QC","entry":"YYZ"},"G3Z":{"zone":"D05","province":"QC","entry":"YYZ"},"G4A":{"zone":"D05","province":"QC","entry":"YYZ"},"G4R":{"zone":"D05","province":"QC","entry":"YYZ"},"G4S":{"zone":"D05","province":"QC","entry":"YYZ"},"G4T":{"zone":"D10","province":"QC","entry":"YYZ"},"G4V":{"zone":"D05","province":"QC","entry":"YYZ"},"G4W":{"zone":"D05","province":"QC","entry":"YYZ"},"G4X":{"zone":"D05","province":"QC","entry":"YYZ"},"G4Z":{"zone":"D05","province":"QC","entry":"YYZ"},"G5A":{"zone":"D05","province":"QC","entry":"YYZ"},"G5B":{"zone":"D05","province":"QC","entry":"YYZ"},"G5C":{"zone":"D05","province":"QC","entry":"YYZ"},"G5H":{"zone":"D05","province":"QC","entry":"YYZ"},"G5J":{"zone":"D05","province":"QC","entry":"YYZ"},"G5L":{"zone":"D05","province":"QC","entry":"YYZ"},"G5M":{"zone":"D05","province":"QC","entry":"YYZ"},"G5N":{"zone":"D05","province":"QC","entry":"YYZ"},"G5R":{"zone":"D05","province":"QC","entry":"YYZ"},"G5T":{"zone":"D05","province":"QC","entry":"YYZ"},"G5V":{"zone":"D06","province":"QC","entry":"YYZ"},"G5X":{"zone":"D06","province":"QC","entry":"YYZ"},"G5Y":{"zone":"D06","province":"QC","entry":"YYZ"},"G5Z":{"zone":"D06","province":"QC","entry":"YYZ"},"G6A":{"zone":"D06","province":"QC","entry":"YYZ"},"G6B":{"zone":"D06","province":"QC","entry":"YYZ"},"G6C":{"zone":"D04","province":"QC","entry":"YYZ"},"G6E":{"zone":"D06","province":"QC","entry":"YYZ"},"G6G":{"zone":"D06","province":"QC","entry":"YYZ"},"G6H":{"zone":"D06","province":"QC","entry":"YYZ"},"G6J":{"zone":"D06","province":"QC","entry":"YYZ"},"G6K":{"zone":"D04","province":"QC","entry":"YYZ"},"G6L":{"zone":"D06","province":"QC","entry":"YYZ"},"G6P":{"zone":"D06","province":"QC","entry":"YYZ"},"G6R":{"zone":"D06","province":"QC","entry":"YYZ"},"G6S":{"zone":"D06","province":"QC","entry":"YYZ"},"G6T":{"zone":"D06","province":"QC","entry":"YYZ"},"G6V":{"zone":"D04","province":"QC","entry":"YYZ"},"G6W":{"zone":"D04","province":"QC","entry":"YYZ"},"G6X":{"zone":"D04","province":"QC","entry":"YYZ"},"G6Y":{"zone":"D04","province":"QC","entry":"YYZ"},"G6Z":{"zone":"D04","province":"QC","entry":"YYZ"},"G7A":{"zone":"D04","province":"QC","entry":"YYZ"},"G7B":{"zone":"D05","province":"QC","entry":"YYZ"},"G7G":{"zone":"D05","province":"QC","entry":"YYZ"},"G7H":{"zone":"D05","province":"QC","entry":"YYZ"},"G7J":{"zone":"D05","province":"QC","entry":"YYZ"},"G7K":{"zone":"D05","province":"QC","entry":"YYZ"},"G7N":{"zone":"D05","province":"QC","entry":"YYZ"},"G7P":{"zone":"D05","province":"QC","entry":"YYZ"},"G7S":{"zone":"D05","province":"QC","entry":"YYZ"},"G7T":{"zone":"D05","province":"QC","entry":"YYZ"},"G7X":{"zone":"D05","province":"QC","entry":"YYZ"},"G7Y":{"zone":"D05","province":"QC","entry":"YYZ"},"G7Z":{"zone":"D05","province":"QC","entry":"YYZ"},"G8A":{"zone":"D05","province":"QC","entry":"YYZ"},"G8B":{"zone":"D05","province":"QC","entry":"YYZ"},"G8C":{"zone":"D05","province":"QC","entry":"YYZ"},"G8E":{"zone":"D05","province":"QC","entry":"YYZ"},"G8G":{"zone":"D05","province":"QC","entry":"YYZ"},"G8H":{"zone":"D05","province":"QC","entry":"YYZ"},"G8J":{"zone":"D05","province":"QC","entry":"YYZ"},"G8K":{"zone":"D05","province":"QC","entry":"YYZ"},"G8L":{"zone":"D05","province":"QC","entry":"YYZ"},"G8M":{"zone":"D05","province":"QC","entry":"YYZ"},"G8N":{"zone":"D05","province":"QC","entry":"YYZ"},"G8P":{"zone":"D10","province":"QC","entry":"YYZ"},"G8T":{"zone":"D06","province":"QC","entry":"YYZ"},"G8V":{"zone":"D06","province":"QC","entry":"YYZ"},"G8W":{"zone":"D06","province":"QC","entry":"YYZ"},"G8Y":{"zone":"D06","province":"QC","entry":"YYZ"},"G8Z":{"zone":"D06","province":"QC","entry":"YYZ"},"G9A":{"zone":"D06","province":"QC","entry":"YYZ"},"G9B":{"zone":"D06","province":"QC","entry":"YYZ"},"G9C":{"zone":"D06","province":"QC","entry":"YYZ"},"G9H":{"zone":"D06","province":"QC","entry":"YYZ"},"G9N":{"zone":"D06","province":"QC","entry":"YYZ"},"G9P":{"zone":"D06","province":"QC","entry":"YYZ"},"G9R":{"zone":"D06","province":"QC","entry":"YYZ"},"G9T":{"zone":"D06","province":"QC","entry":"YYZ"},"G9X":{"zone":"D06","province":"QC","entry":"YYZ"},"H0M":{"zone":"D06","province":"QC","entry":"YYZ"},"H1A":{"zone":"D04","province":"QC","entry":"YYZ"},"H1B":{"zone":"D04","province":"QC","entry":"YYZ"},"H1C":{"zone":"D04","province":"QC","entry":"YYZ"},"H1E":{"zone":"D04","province":"QC","entry":"YYZ"},"H1G":{"zone":"D04","province":"QC","entry":"YYZ"},"H1H":{"zone":"D04","province":"QC","entry":"YYZ"},"H1J":{"zone":"D04","province":"QC","entry":"YYZ"},"H1K":{"zone":"D04","province":"QC","entry":"YYZ"},"H1L":{"zone":"D04","province":"QC","entry":"YYZ"},"H1M":{"zone":"D04","province":"QC","entry":"YYZ"},"H1N":{"zone":"D04","province":"QC","entry":"YYZ"},"H1P":{"zone":"D04","province":"QC","entry":"YYZ"},"H1R":{"zone":"D04","province":"QC","entry":"YYZ"},"H1S":{"zone":"D04","province":"QC","entry":"YYZ"},"H1T":{"zone":"D04","province":"QC","entry":"YYZ"},"H1V":{"zone":"D04","province":"QC","entry":"YYZ"},"H1W":{"zone":"D04","province":"QC","entry":"YYZ"},"H1X":{"zone":"D04","province":"QC","entry":"YYZ"},"H1Y":{"zone":"D04","province":"QC","entry":"YYZ"},"H1Z":{"zone":"D04","province":"QC","entry":"YYZ"},"H2A":{"zone":"D04","province":"QC","entry":"YYZ"},"H2B":{"zone":"D04","province":"QC","entry":"YYZ"},"H2C":{"zone":"D04","province":"QC","entry":"YYZ"},"H2E":{"zone":"D04","province":"QC","entry":"YYZ"},"H2G":{"zone":"D04","province":"QC","entry":"YYZ"},"H2H":{"zone":"D04","province":"QC","entry":"YYZ"},"H2J":{"zone":"D04","province":"QC","entry":"YYZ"},"H2K":{"zone":"D04","province":"QC","entry":"YYZ"},"H2L":{"zone":"D04","province":"QC","entry":"YYZ"},"H2M":{"zone":"D04","province":"QC","entry":"YYZ"},"H2N":{"zone":"D04","province":"QC","entry":"YYZ"},"H2P":{"zone":"D04","province":"QC","entry":"YYZ"},"H2R":{"zone":"D04","province":"QC","entry":"YYZ"},"H2S":{"zone":"D04","province":"QC","entry":"YYZ"},"H2T":{"zone":"D04","province":"QC","entry":"YYZ"},"H2V":{"zone":"D04","province":"QC","entry":"YYZ"},"H2W":{"zone":"D04","province":"QC","entry":"YYZ"},"H2X":{"zone":"D04","province":"QC","entry":"YYZ"},"H2Y":{"zone":"D04","province":"QC","entry":"YYZ"},"H2Z":{"zone":"D04","province":"QC","entry":"YYZ"},"H3A":{"zone":"D04","province":"QC","entry":"YYZ"},"H3B":{"zone":"D04","province":"QC","entry":"YYZ"},"H3C":{"zone":"D04","province":"QC","entry":"YYZ"},"H3E":{"zone":"D04","province":"QC","entry":"YYZ"},"H3G":{"zone":"D04","province":"QC","entry":"YYZ"},"H3H":{"zone":"D04","province":"QC","entry":"YYZ"},"H3J":{"zone":"D04","province":"QC","entry":"YYZ"},"H3K":{"zone":"D04","province":"QC","entry":"YYZ"},"H3L":{"zone":"D04","province":"QC","entry":"YYZ"},"H3M":{"zone":"D04","province":"QC","entry":"YYZ"},"H3N":{"zone":"D04","province":"QC","entry":"YYZ"},"H3P":{"zone":"D04","province":"QC","entry":"YYZ"},"H3R":{"zone":"D04","province":"QC","entry":"YYZ"},"H3S":{"zone":"D04","province":"QC","entry":"YYZ"},"H3T":{"zone":"D04","province":"QC","entry":"YYZ"},"H3V":{"zone":"D04","province":"QC","entry":"YYZ"},"H3W":{"zone":"D04","province":"QC","entry":"YYZ"},"H3X":{"zone":"D04","province":"QC","entry":"YYZ"},"H3Y":{"zone":"D04","province":"QC","entry":"YYZ"},"H3Z":{"zone":"D04","province":"QC","entry":"YYZ"},"H4A":{"zone":"D04","province":"QC","entry":"YYZ"},"H4B":{"zone":"D04","province":"QC","entry":"YYZ"},"H4C":{"zone":"D04","province":"QC","entry":"YYZ"},"H4E":{"zone":"D04","province":"QC","entry":"YYZ"},"H4G":{"zone":"D04","province":"QC","entry":"YYZ"},"H4H":{"zone":"D04","province":"QC","entry":"YYZ"},"H4J":{"zone":"D04","province":"QC","entry":"YYZ"},"H4K":{"zone":"D04","province":"QC","entry":"YYZ"},"H4L":{"zone":"D04","province":"QC","entry":"YYZ"},"H4M":{"zone":"D04","province":"QC","entry":"YYZ"},"H4N":{"zone":"D04","province":"QC","entry":"YYZ"},"H4P":{"zone":"D04","province":"QC","entry":"YYZ"},"H4R":{"zone":"D04","province":"QC","entry":"YYZ"},"H4S":{"zone":"D04","province":"QC","entry":"YYZ"},"H4T":{"zone":"D04","province":"QC","entry":"YYZ"},"H4V":{"zone":"D04","province":"QC","entry":"YYZ"},"H4W":{"zone":"D04","province":"QC","entry":"YYZ"},"H4X":{"zone":"D04","province":"QC","entry":"YYZ"},"H4Y":{"zone":"D04","province":"QC","entry":"YYZ"},"H4Z":{"zone":"D04","province":"QC","entry":"YYZ"},"H5A":{"zone":"D04","province":"QC","entry":"YYZ"},"H5B":{"zone":"D04","province":"QC","entry":"YYZ"},"H7A":{"zone":"D05","province":"QC","entry":"YYZ"},"H7B":{"zone":"D04","province":"QC","entry":"YYZ"},"H7C":{"zone":"D04","province":"QC","entry":"YYZ"},"H7E":{"zone":"D04","province":"QC","entry":"YYZ"},"H7G":{"zone":"D04","province":"QC","entry":"YYZ"},"H7H":{"zone":"D04","province":"QC","entry":"YYZ"},"H7J":{"zone":"D05","province":"QC","entry":"YYZ"},"H7K":{"zone":"D04","province":"QC","entry":"YYZ"},"H7L":{"zone":"D04","province":"QC","entry":"YYZ"},"H7M":{"zone":"D04","province":"QC","entry":"YYZ"},"H7N":{"zone":"D04","province":"QC","entry":"YYZ"},"H7P":{"zone":"D04","province":"QC","entry":"YYZ"},"H7R":{"zone":"D04","province":"QC","entry":"YYZ"},"H7S":{"zone":"D04","province":"QC","entry":"YYZ"},"H7T":{"zone":"D04","province":"QC","entry":"YYZ"},"H7V":{"zone":"D04","province":"QC","entry":"YYZ"},"H7W":{"zone":"D04","province":"QC","entry":"YYZ"},"H7X":{"zone":"D04","province":"QC","entry":"YYZ"},"H7Y":{"zone":"D04","province":"QC","entry":"YYZ"},"H8N":{"zone":"D04","province":"QC","entry":"YYZ"},"H8P":{"zone":"D04","province":"QC","entry":"YYZ"},"H8R":{"zone":"D04","province":"QC","entry":"YYZ"},"H8S":{"zone":"D04","province":"QC","entry":"YYZ"},"H8T":{"zone":"D04","province":"QC","entry":"YYZ"},"H8Y":{"zone":"D04","province":"QC","entry":"YYZ"},"H8Z":{"zone":"D04","province":"QC","entry":"YYZ"},"H9A":{"zone":"D05","province":"QC","entry":"YYZ"},"H9B":{"zone":"D05","province":"QC","entry":"YYZ"},"H9C":{"zone":"D05","province":"QC","entry":"YYZ"},"H9E":{"zone":"D05","province":"QC","entry":"YYZ"},"H9G":{"zone":"D04","province":"QC","entry":"YYZ"},"H9H":{"zone":"D04","province":"QC","entry":"YYZ"},"H9J":{"zone":"D04","province":"QC","entry":"YYZ"},"H9K":{"zone":"D05","province":"QC","entry":"YYZ"},"H9P":{"zone":"D04","province":"QC","entry":"YYZ"},"H9R":{"zone":"D04","province":"QC","entry":"YYZ"},"H9S":{"zone":"D04","province":"QC","entry":"YYZ"},"H9W":{"zone":"D04","province":"QC","entry":"YYZ"},"H9X":{"zone":"D04","province":"QC","entry":"YYZ"},"J0A":{"zone":"D06","province":"QC","entry":"YYZ"},"J0B":{"zone":"D06","province":"QC","entry":"YYZ"},"J0C":{"zone":"D06","province":"QC","entry":"YYZ"},"J0E":{"zone":"D06","province":"QC","entry":"YYZ"},"J0G":{"zone":"D05","province":"QC","entry":"YYZ"},"J0H":{"zone":"D05","province":"QC","entry":"YYZ"},"J0J":{"zone":"D05","province":"QC","entry":"YYZ"},"J0K":{"zone":"D05","province":"QC","entry":"YYZ"},"J0L":{"zone":"D05","province":"QC","entry":"YYZ"},"J0M":{"zone":"D11","province":"QC","entry":"YYZ"},"J0N":{"zone":"D05","province":"QC","entry":"YYZ"},"J0P":{"zone":"D05","province":"QC","entry":"YYZ"},"J0R":{"zone":"D05","province":"QC","entry":"YYZ"},"J0S":{"zone":"D05","province":"QC","entry":"YYZ"},"J0T":{"zone":"D05","province":"QC","entry":"YYZ"},"J0V":{"zone":"D05","province":"QC","entry":"YYZ"},"J0W":{"zone":"D07","province":"QC","entry":"YYZ"},"J0X":{"zone":"D06","province":"QC","entry":"YYZ"},"J0Y":{"zone":"D09","province":"QC","entry":"YYZ"},"J0Z":{"zone":"D07","province":"QC","entry":"YYZ"},"J1A":{"zone":"D06","province":"QC","entry":"YYZ"},"J1C":{"zone":"D06","province":"QC","entry":"YYZ"},"J1E":{"zone":"D06","province":"QC","entry":"YYZ"},"J1G":{"zone":"D06","province":"QC","entry":"YYZ"},"J1H":{"zone":"D06","province":"QC","entry":"YYZ"},"J1J":{"zone":"D06","province":"QC","entry":"YYZ"},"J1K":{"zone":"D06","province":"QC","entry":"YYZ"},"J1L":{"zone":"D06","province":"QC","entry":"YYZ"},"J1M":{"zone":"D06","province":"QC","entry":"YYZ"},"J1N":{"zone":"D06","province":"QC","entry":"YYZ"},"J1R":{"zone":"D06","province":"QC","entry":"YYZ"},"J1S":{"zone":"D06","province":"QC","entry":"YYZ"},"J1T":{"zone":"D06","province":"QC","entry":"YYZ"},"J1X":{"zone":"D06","province":"QC","entry":"YYZ"},"J1Z":{"zone":"D06","province":"QC","entry":"YYZ"},"J2A":{"zone":"D06","province":"QC","entry":"YYZ"},"J2B":{"zone":"D06","province":"QC","entry":"YYZ"},"J2C":{"zone":"D06","province":"QC","entry":"YYZ"},"J2E":{"zone":"D06","province":"QC","entry":"YYZ"},"J2G":{"zone":"D05","province":"QC","entry":"YYZ"},"J2H":{"zone":"D05","province":"QC","entry":"YYZ"},"J2J":{"zone":"D05","province":"QC","entry":"YYZ"},"J2K":{"zone":"D05","province":"QC","entry":"YYZ"},"J2L":{"zone":"D05","province":"QC","entry":"YYZ"},"J2M":{"zone":"D06","province":"QC","entry":"YYZ"},"J2N":{"zone":"D05","province":"QC","entry":"YYZ"},"J2R":{"zone":"D05","province":"QC","entry":"YYZ"},"J2S":{"zone":"D05","province":"QC","entry":"YYZ"},"J2T":{"zone":"D05","province":"QC","entry":"YYZ"},"J2W":{"zone":"D05","province":"QC","entry":"YYZ"},"J2X":{"zone":"D05","province":"QC","entry":"YYZ"},"J2Y":{"zone":"D05","province":"QC","entry":"YYZ"},"J3A":{"zone":"D05","province":"QC","entry":"YYZ"},"J3B":{"zone":"D05","province":"QC","entry":"YYZ"},"J3E":{"zone":"D05","province":"QC","entry":"YYZ"},"J3G":{"zone":"D05","province":"QC","entry":"YYZ"},"J3H":{"zone":"D05","province":"QC","entry":"YYZ"},"J3L":{"zone":"D05","province":"QC","entry":"YYZ"},"J3M":{"zone":"D05","province":"QC","entry":"YYZ"},"J3N":{"zone":"D05","province":"QC","entry":"YYZ"},"J3P":{"zone":"D05","province":"QC","entry":"YYZ"},"J3R":{"zone":"D05","province":"QC","entry":"YYZ"},"J3T":{"zone":"D06","province":"QC","entry":"YYZ"},"J3V":{"zone":"D05","province":"QC","entry":"YYZ"},"J3X":{"zone":"D06","province":"QC","entry":"YYZ"},"J3Y":{"zone":"D05","province":"QC","entry":"YYZ"},"J3Z":{"zone":"D05","province":"QC","entry":"YYZ"},"J4B":{"zone":"D05","province":"QC","entry":"YYZ"},"J4G":{"zone":"D04","province":"QC","entry":"YYZ"},"J4H":{"zone":"D04","province":"QC","entry":"YYZ"},"J4J":{"zone":"D04","province":"QC","entry":"YYZ"},"J4K":{"zone":"D04","province":"QC","entry":"YYZ"},"J4L":{"zone":"D04","province":"QC","entry":"YYZ"},"J4M":{"zone":"D04","province":"QC","entry":"YYZ"},"J4N":{"zone":"D04","province":"QC","entry":"YYZ"},"J4P":{"zone":"D04","province":"QC","entry":"YYZ"},"J4R":{"zone":"D04","province":"QC","entry":"YYZ"},"J4S":{"zone":"D04","province":"QC","entry":"YYZ"},"J4T":{"zone":"D05","province":"QC","entry":"YYZ"},"J4V":{"zone":"D04","province":"QC","entry":"YYZ"},"J4W":{"zone":"D04","province":"QC","entry":"YYZ"},"J4X":{"zone":"D04","province":"QC","entry":"YYZ"},"J4Y":{"zone":"D04","province":"QC","entry":"YYZ"},"J4Z":{"zone":"D04","province":"QC","entry":"YYZ"},"J5A":{"zone":"D05","province":"QC","entry":"YYZ"},"J5B":{"zone":"D04","province":"QC","entry":"YYZ"},"J5C":{"zone":"D04","province":"QC","entry":"YYZ"},"J5J":{"zone":"D05","province":"QC","entry":"YYZ"},"J5K":{"zone":"D05","province":"QC","entry":"YYZ"},"J5L":{"zone":"D05","province":"QC","entry":"YYZ"},"J5M":{"zone":"D05","province":"QC","entry":"YYZ"},"J5R":{"zone":"D05","province":"QC","entry":"YYZ"},"J5T":{"zone":"D05","province":"QC","entry":"YYZ"},"J5V":{"zone":"D06","province":"QC","entry":"YYZ"},"J5W":{"zone":"D05","province":"QC","entry":"YYZ"},"J5X":{"zone":"D05","province":"QC","entry":"YYZ"},"J5Y":{"zone":"D05","province":"QC","entry":"YYZ"},"J5Z":{"zone":"D05","province":"QC","entry":"YYZ"},"J6A":{"zone":"D05","province":"QC","entry":"YYZ"},"J6E":{"zone":"D05","province":"QC","entry":"YYZ"},"J6J":{"zone":"D05","province":"QC","entry":"YYZ"},"J6K":{"zone":"D05","province":"QC","entry":"YYZ"},"J6N":{"zone":"D05","province":"QC","entry":"YYZ"},"J6R":{"zone":"D05","province":"QC","entry":"YYZ"},"J6S":{"zone":"D05","province":"QC","entry":"YYZ"},"J6T":{"zone":"D05","province":"QC","entry":"YYZ"},"J6V":{"zone":"D05","province":"QC","entry":"YYZ"},"J6W":{"zone":"D05","province":"QC","entry":"YYZ"},"J6X":{"zone":"D05","province":"QC","entry":"YYZ"},"J6Y":{"zone":"D05","province":"QC","entry":"YYZ"},"J6Z":{"zone":"D05","province":"QC","entry":"YYZ"},"J7A":{"zone":"D05","province":"QC","entry":"YYZ"},"J7B":{"zone":"D05","province":"QC","entry":"YYZ"},"J7C":{"zone":"D05","province":"QC","entry":"YYZ"},"J7E":{"zone":"D05","province":"QC","entry":"YYZ"},"J7G":{"zone":"D05","province":"QC","entry":"YYZ"},"J7H":{"zone":"D05","province":"QC","entry":"YYZ"},"J7J":{"zone":"D05","province":"QC","entry":"YYZ"},"J7K":{"zone":"D05","province":"QC","entry":"YYZ"},"J7L":{"zone":"D05","province":"QC","entry":"YYZ"},"J7M":{"zone":"D05","province":"QC","entry":"YYZ"},"J7N":{"zone":"D05","province":"QC","entry":"YYZ"},"J7P":{"zone":"D05","province":"QC","entry":"YYZ"},"J7R":{"zone":"D05","province":"QC","entry":"YYZ"},"J7T":{"zone":"D05","province":"QC","entry":"YYZ"},"J7V":{"zone":"D05","province":"QC","entry":"YYZ"},"J7W":{"zone":"D05","province":"QC","entry":"YYZ"},"J7X":{"zone":"D05","province":"QC","entry":"YYZ"},"J7Y":{"zone":"D05","province":"QC","entry":"YYZ"},"J7Z":{"zone":"D05","province":"QC","entry":"YYZ"},"J8A":{"zone":"D05","province":"QC","entry":"YYZ"},"J8B":{"zone":"D05","province":"QC","entry":"YYZ"},"J8C":{"zone":"D05","province":"QC","entry":"YYZ"},"J8E":{"zone":"D05","province":"QC","entry":"YYZ"},"J8G":{"zone":"D05","province":"QC","entry":"YYZ"},"J8H":{"zone":"D05","province":"QC","entry":"YYZ"},"J8L":{"zone":"D05","province":"QC","entry":"YYZ"},"J8M":{"zone":"D05","province":"QC","entry":"YYZ"},"J8N":{"zone":"D06","province":"QC","entry":"YYZ"},"J8P":{"zone":"D03","province":"QC","entry":"YYZ"},"J8R":{"zone":"D05","province":"QC","entry":"YYZ"},"J8T":{"zone":"D03","province":"QC","entry":"YYZ"},"J8V":{"zone":"D03","province":"QC","entry":"YYZ"},"J8X":{"zone":"D03","province":"QC","entry":"YYZ"},"J8Y":{"zone":"D03","province":"QC","entry":"YYZ"},"J8Z":{"zone":"D03","province":"QC","entry":"YYZ"},"J9A":{"zone":"D03","province":"QC","entry":"YYZ"},"J9B":{"zone":"D06","province":"QC","entry":"YYZ"},"J9E":{"zone":"D07","province":"QC","entry":"YYZ"},"J9H":{"zone":"D03","province":"QC","entry":"YYZ"},"J9J":{"zone":"D03","province":"QC","entry":"YYZ"},"J9L":{"zone":"D07","province":"QC","entry":"YYZ"},"J9P":{"zone":"D08","province":"QC","entry":"YYZ"},"J9T":{"zone":"D08","province":"QC","entry":"YYZ"},"J9V":{"zone":"D07","province":"QC","entry":"YYZ"},"J9X":{"zone":"D07","province":"QC","entry":"YYZ"},"J9Y":{"zone":"D07","province":"QC","entry":"YYZ"},"J9Z":{"zone":"D08","province":"QC","entry":"YYZ"},"K0A":{"zone":"D05","province":"ON","entry":"YYZ"},"K0B":{"zone":"D06","province":"ON","entry":"YYZ"},"K0C":{"zone":"D05","province":"ON","entry":"YYZ"},"K0E":{"zone":"D05","province":"ON","entry":"YYZ"},"K0G":{"zone":"D05","province":"ON","entry":"YYZ"},"K0H":{"zone":"D04","province":"ON","entry":"YYZ"},"K0J":{"zone":"D05","province":"ON","entry":"YYZ"},"K0K":{"zone":"D04","province":"ON","entry":"YYZ"},"K0L":{"zone":"D04","province":"ON","entry":"YYZ"},"K0M":{"zone":"D04","province":"ON","entry":"YYZ"},"K1A":{"zone":"D03","province":"ON","entry":"YYZ"},"K1B":{"zone":"D03","province":"ON","entry":"YYZ"},"K1C":{"zone":"D03","province":"ON","entry":"YYZ"},"K1E":{"zone":"D03","province":"ON","entry":"YYZ"},"K1G":{"zone":"D03","province":"ON","entry":"YYZ"},"K1H":{"zone":"D03","province":"ON","entry":"YYZ"},"K1J":{"zone":"D03","province":"ON","entry":"YYZ"},"K1K":{"zone":"D03","province":"ON","entry":"YYZ"},"K1L":{"zone":"D03","province":"ON","entry":"YYZ"},"K1M":{"zone":"D03","province":"ON","entry":"YYZ"},"K1N":{"zone":"D03","province":"ON","entry":"YYZ"},"K1P":{"zone":"D03","province":"ON","entry":"YYZ"},"K1R":{"zone":"D03","province":"ON","entry":"YYZ"},"K1S":{"zone":"D03","province":"ON","entry":"YYZ"},"K1T":{"zone":"D03","province":"ON","entry":"YYZ"},"K1V":{"zone":"D03","province":"ON","entry":"YYZ"},"K1W":{"zone":"D03","province":"ON","entry":"YYZ"},"K1X":{"zone":"D03","province":"ON","entry":"YYZ"},"K1Y":{"zone":"D03","province":"ON","entry":"YYZ"},"K1Z":{"zone":"D03","province":"ON","entry":"YYZ"},"K2A":{"zone":"D03","province":"ON","entry":"YYZ"},"K2B":{"zone":"D03","province":"ON","entry":"YYZ"},"K2C":{"zone":"D03","province":"ON","entry":"YYZ"},"K2E":{"zone":"D03","province":"ON","entry":"YYZ"},"K2G":{"zone":"D03","province":"ON","entry":"YYZ"},"K2H":{"zone":"D03","province":"ON","entry":"YYZ"},"K2J":{"zone":"D03","province":"ON","entry":"YYZ"},"K2K":{"zone":"D03","province":"ON","entry":"YYZ"},"K2L":{"zone":"D03","province":"ON","entry":"YYZ"},"K2M":{"zone":"D03","province":"ON","entry":"YYZ"},"K2P":{"zone":"D03","province":"ON","entry":"YYZ"},"K2R":{"zone":"D03","province":"ON","entry":"YYZ"},"K2S":{"zone":"D03","province":"ON","entry":"YYZ"},"K2T":{"zone":"D03","province":"ON","entry":"YYZ"},"K2V":{"zone":"D03","province":"ON","entry":"YYZ"},"K2W":{"zone":"D03","province":"ON","entry":"YYZ"},"K4A":{"zone":"D03","province":"ON","entry":"YYZ"},"K4B":{"zone":"D05","province":"ON","entry":"YYZ"},"K4C":{"zone":"D05","province":"ON","entry":"YYZ"},"K4K":{"zone":"D05","province":"ON","entry":"YYZ"},"K4M":{"zone":"D05","province":"ON","entry":"YYZ"},"K4P":{"zone":"D05","province":"ON","entry":"YYZ"},"K4R":{"zone":"D05","province":"ON","entry":"YYZ"},"K6A":{"zone":"D05","province":"ON","entry":"YYZ"},"K6H":{"zone":"D04","province":"ON","entry":"YYZ"},"K6J":{"zone":"D04","province":"ON","entry":"YYZ"},"K6K":{"zone":"D04","province":"ON","entry":"YYZ"},"K6T":{"zone":"D05","province":"ON","entry":"YYZ"},"K6V":{"zone":"D04","province":"ON","entry":"YYZ"},"K7A":{"zone":"D04","province":"ON","entry":"YYZ"},"K7C":{"zone":"D04","province":"ON","entry":"YYZ"},"K7G":{"zone":"D03","province":"ON","entry":"YYZ"},"K7H":{"zone":"D04","province":"ON","entry":"YYZ"},"K7K":{"zone":"D04","province":"ON","entry":"YYZ"},"K7L":{"zone":"D03","province":"ON","entry":"YYZ"},"K7M":{"zone":"D03","province":"ON","entry":"YYZ"},"K7N":{"zone":"D03","province":"ON","entry":"YYZ"},"K7P":{"zone":"D03","province":"ON","entry":"YYZ"},"K7R":{"zone":"D03","province":"ON","entry":"YYZ"},"K7S":{"zone":"D04","province":"ON","entry":"YYZ"},"K7V":{"zone":"D04","province":"ON","entry":"YYZ"},"K8A":{"zone":"D04","province":"ON","entry":"YYZ"},"K8B":{"zone":"D04","province":"ON","entry":"YYZ"},"K8H":{"zone":"D04","province":"ON","entry":"YYZ"},"K8N":{"zone":"D03","province":"ON","entry":"YYZ"},"K8P":{"zone":"D03","province":"ON","entry":"YYZ"},"K8R":{"zone":"D03","province":"ON","entry":"YYZ"},"K8V":{"zone":"D03","province":"ON","entry":"YYZ"},"K9A":{"zone":"D03","province":"ON","entry":"YYZ"},"K9H":{"zone":"D02","province":"ON","entry":"YYZ"},"K9J":{"zone":"D02","province":"ON","entry":"YYZ"},"K9K":{"zone":"D02","province":"ON","entry":"YYZ"},"K9L":{"zone":"D02","province":"ON","entry":"YYZ"},"K9V":{"zone":"D03","province":"ON","entry":"YYZ"},"L0A":{"zone":"D03","province":"ON","entry":"YYZ"},"L0B":{"zone":"D03","province":"ON","entry":"YYZ"},"L0C":{"zone":"D03","province":"ON","entry":"YYZ"},"L0E":{"zone":"D03","province":"ON","entry":"YYZ"},"L0G":{"zone":"D03","province":"ON","entry":"YYZ"},"L0H":{"zone":"D01","province":"ON","entry":"YYZ"},"L0J":{"zone":"D03","province":"ON","entry":"YYZ"},"L0K":{"zone":"D04","province":"ON","entry":"YYZ"},"L0L":{"zone":"D03","province":"ON","entry":"YYZ"},"L0M":{"zone":"D03","province":"ON","entry":"YYZ"},"L0N":{"zone":"D04","province":"ON","entry":"YYZ"},"L0P":{"zone":"D03","province":"ON","entry":"YYZ"},"L0R":{"zone":"D03","province":"ON","entry":"YYZ"},"L0S":{"zone":"D03","province":"ON","entry":"YYZ"},"L1A":{"zone":"D03","province":"ON","entry":"YYZ"},"L1B":{"zone":"D03","province":"ON","entry":"YYZ"},"L1C":{"zone":"D03","province":"ON","entry":"YYZ"},"L1E":{"zone":"D03","province":"ON","entry":"YYZ"},"L1G":{"zone":"D02","province":"ON","entry":"YYZ"},"L1H":{"zone":"D02","province":"ON","entry":"YYZ"},"L1J":{"zone":"D01","province":"ON","entry":"YYZ"},"L1K":{"zone":"D02","province":"ON","entry":"YYZ"},"L1L":{"zone":"D02","province":"ON","entry":"YYZ"},"L1M":{"zone":"D02","province":"ON","entry":"YYZ"},"L1N":{"zone":"D01","province":"ON","entry":"YYZ"},"L1P":{"zone":"D02","province":"ON","entry":"YYZ"},"L1R":{"zone":"D02","province":"ON","entry":"YYZ"},"L1S":{"zone":"D01","province":"ON","entry":"YYZ"},"L1T":{"zone":"D02","province":"ON","entry":"YYZ"},"L1V":{"zone":"D01","province":"ON","entry":"YYZ"},"L1W":{"zone":"D01","province":"ON","entry":"YYZ"},"L1X":{"zone":"D02","province":"ON","entry":"YYZ"},"L1Y":{"zone":"D02","province":"ON","entry":"YYZ"},"L1Z":{"zone":"D02","province":"ON","entry":"YYZ"},"L2A":{"zone":"D03","province":"ON","entry":"YYZ"},"L2E":{"zone":"D03","province":"ON","entry":"YYZ"},"L2G":{"zone":"D03","province":"ON","entry":"YYZ"},"L2H":{"zone":"D03","province":"ON","entry":"YYZ"},"L2J":{"zone":"D03","province":"ON","entry":"YYZ"},"L2M":{"zone":"D02","province":"ON","entry":"YYZ"},"L2N":{"zone":"D02","province":"ON","entry":"YYZ"},"L2P":{"zone":"D02","province":"ON","entry":"YYZ"},"L2R":{"zone":"D02","province":"ON","entry":"YYZ"},"L2S":{"zone":"D02","province":"ON","entry":"YYZ"},"L2T":{"zone":"D02","province":"ON","entry":"YYZ"},"L2V":{"zone":"D02","province":"ON","entry":"YYZ"},"L2W":{"zone":"D02","province":"ON","entry":"YYZ"},"L3B":{"zone":"D03","province":"ON","entry":"YYZ"},"L3C":{"zone":"D03","province":"ON","entry":"YYZ"},"L3K":{"zone":"D03","province":"ON","entry":"YYZ"},"L3L":{"zone":"D01","province":"ON","entry":"YYZ"},"L3M":{"zone":"D02","province":"ON","entry":"YYZ"},"L3P":{"zone":"D01","province":"ON","entry":"YYZ"},"L3R":{"zone":"D01","province":"ON","entry":"YYZ"},"L3S":{"zone":"D01","province":"ON","entry":"YYZ"},"L3T":{"zone":"D01","province":"ON","entry":"YYZ"},"L3V":{"zone":"D03","province":"ON","entry":"YYZ"},"L3X":{"zone":"D01","province":"ON","entry":"YYZ"},"L3Y":{"zone":"D01","province":"ON","entry":"YYZ"},"L3Z":{"zone":"D03","province":"ON","entry":"YYZ"},"L4A":{"zone":"D02","province":"ON","entry":"YYZ"},"L4B":{"zone":"D01","province":"ON","entry":"YYZ"},"L4C":{"zone":"D01","province":"ON","entry":"YYZ"},"L4E":{"zone":"D01","province":"ON","entry":"YYZ"},"L4G":{"zone":"D01","province":"ON","entry":"YYZ"},"L4H":{"zone":"D01","province":"ON","entry":"YYZ"},"L4J":{"zone":"D01","province":"ON","entry":"YYZ"},"L4K":{"zone":"D01","province":"ON","entry":"YYZ"},"L4L":{"zone":"D01","province":"ON","entry":"YYZ"},"L4M":{"zone":"D02","province":"ON","entry":"YYZ"},"L4N":{"zone":"D02","province":"ON","entry":"YYZ"},"L4P":{"zone":"D02","province":"ON","entry":"YYZ"},"L4R":{"zone":"D03","province":"ON","entry":"YYZ"},"L4S":{"zone":"D01","province":"ON","entry":"YYZ"},"L4T":{"zone":"D01","province":"ON","entry":"YYZ"},"L4V":{"zone":"D01","province":"ON","entry":"YYZ"},"L4W":{"zone":"D01","province":"ON","entry":"YYZ"},"L4X":{"zone":"D01","province":"ON","entry":"YYZ"},"L4Y":{"zone":"D01","province":"ON","entry":"YYZ"},"L4Z":{"zone":"D01","province":"ON","entry":"YYZ"},"L5A":{"zone":"D01","province":"ON","entry":"YYZ"},"L5B":{"zone":"D01","province":"ON","entry":"YYZ"},"L5C":{"zone":"D01","province":"ON","entry":"YYZ"},"L5E":{"zone":"D01","province":"ON","entry":"YYZ"},"L5G":{"zone":"D01","province":"ON","entry":"YYZ"},"L5H":{"zone":"D01","province":"ON","entry":"YYZ"},"L5J":{"zone":"D01","province":"ON","entry":"YYZ"},"L5K":{"zone":"D01","province":"ON","entry":"YYZ"},"L5L":{"zone":"D01","province":"ON","entry":"YYZ"},"L5M":{"zone":"D01","province":"ON","entry":"YYZ"},"L5N":{"zone":"D01","province":"ON","entry":"YYZ"},"L5P":{"zone":"D01","province":"ON","entry":"YYZ"},"L5R":{"zone":"D01","province":"ON","entry":"YYZ"},"L5S":{"zone":"D01","province":"ON","entry":"YYZ"},"L5T":{"zone":"D01","province":"ON","entry":"YYZ"},"L5V":{"zone":"D01","province":"ON","entry":"YYZ"},"L5W":{"zone":"D01","province":"ON","entry":"YYZ"},"L6A":{"zone":"D01","province":"ON","entry":"YYZ"},"L6B":{"zone":"D01","province":"ON","entry":"YYZ"},"L6C":{"zone":"D01","province":"ON","entry":"YYZ"},"L6E":{"zone":"D01","province":"ON","entry":"YYZ"},"L6G":{"zone":"D01","province":"ON","entry":"YYZ"},"L6H":{"zone":"D02","province":"ON","entry":"YYZ"},"L6J":{"zone":"D02","province":"ON","entry":"YYZ"},"L6K":{"zone":"D02","province":"ON","entry":"YYZ"},"L6L":{"zone":"D02","province":"ON","entry":"YYZ"},"L6M":{"zone":"D02","province":"ON","entry":"YYZ"},"L6P":{"zone":"D01","province":"ON","entry":"YYZ"},"L6R":{"zone":"D01","province":"ON","entry":"YYZ"},"L6S":{"zone":"D01","province":"ON","entry":"YYZ"},"L6T":{"zone":"D01","province":"ON","entry":"YYZ"},"L6V":{"zone":"D01","province":"ON","entry":"YYZ"},"L6W":{"zone":"D01","province":"ON","entry":"YYZ"},"L6X":{"zone":"D01","province":"ON","entry":"YYZ"},"L6Y":{"zone":"D01","province":"ON","entry":"YYZ"},"L6Z":{"zone":"D01","province":"ON","entry":"YYZ"},"L7A":{"zone":"D01","province":"ON","entry":"YYZ"},"L7B":{"zone":"D03","province":"ON","entry":"YYZ"},"L7C":{"zone":"D03","province":"ON","entry":"YYZ"},"L7E":{"zone":"D03","province":"ON","entry":"YYZ"},"L7G":{"zone":"D03","province":"ON","entry":"YYZ"},"L7J":{"zone":"D03","province":"ON","entry":"YYZ"},"L7K":{"zone":"D03","province":"ON","entry":"YYZ"},"L7L":{"zone":"D02","province":"ON","entry":"YYZ"},"L7M":{"zone":"D02","province":"ON","entry":"YYZ"},"L7N":{"zone":"D02","province":"ON","entry":"YYZ"},"L7P":{"zone":"D02","province":"ON","entry":"YYZ"},"L7R":{"zone":"D02","province":"ON","entry":"YYZ"},"L7S":{"zone":"D02","province":"ON","entry":"YYZ"},"L7T":{"zone":"D02","province":"ON","entry":"YYZ"},"L8B":{"zone":"D02","province":"ON","entry":"YYZ"},"L8E":{"zone":"D02","province":"ON","entry":"YYZ"},"L8G":{"zone":"D02","province":"ON","entry":"YYZ"},"L8H":{"zone":"D02","province":"ON","entry":"YYZ"},"L8J":{"zone":"D02","province":"ON","entry":"YYZ"},"L8K":{"zone":"D02","province":"ON","entry":"YYZ"},"L8L":{"zone":"D02","province":"ON","entry":"YYZ"},"L8M":{"zone":"D02","province":"ON","entry":"YYZ"},"L8N":{"zone":"D02","province":"ON","entry":"YYZ"},"L8P":{"zone":"D02","province":"ON","entry":"YYZ"},"L8R":{"zone":"D02","province":"ON","entry":"YYZ"},"L8S":{"zone":"D02","province":"ON","entry":"YYZ"},"L8T":{"zone":"D02","province":"ON","entry":"YYZ"},"L8V":{"zone":"D02","province":"ON","entry":"YYZ"},"L8W":{"zone":"D02","province":"ON","entry":"YYZ"},"L9A":{"zone":"D02","province":"ON","entry":"YYZ"},"L9B":{"zone":"D02","province":"ON","entry":"YYZ"},"L9C":{"zone":"D02","province":"ON","entry":"YYZ"},"L9E":{"zone":"D02","province":"ON","entry":"YYZ"},"L9G":{"zone":"D02","province":"ON","entry":"YYZ"},"L9H":{"zone":"D02","province":"ON","entry":"YYZ"},"L9J":{"zone":"D02","province":"ON","entry":"YYZ"},"L9K":{"zone":"D02","province":"ON","entry":"YYZ"},"L9L":{"zone":"D03","province":"ON","entry":"YYZ"},"L9M":{"zone":"D03","province":"ON","entry":"YYZ"},"L9N":{"zone":"D03","province":"ON","entry":"YYZ"},"L9P":{"zone":"D03","province":"ON","entry":"YYZ"},"L9R":{"zone":"D03","province":"ON","entry":"YYZ"},"L9S":{"zone":"D03","province":"ON","entry":"YYZ"},"L9T":{"zone":"D02","province":"ON","entry":"YYZ"},"L9V":{"zone":"D03","province":"ON","entry":"YYZ"},"L9W":{"zone":"D03","province":"ON","entry":"YYZ"},"L9X":{"zone":"D03","province":"ON","entry":"YYZ"},"L9Y":{"zone":"D03","province":"ON","entry":"YYZ"},"L9Z":{"zone":"D03","province":"ON","entry":"YYZ"},"M1B":{"zone":"D01","province":"ON","entry":"YYZ"},"M1C":{"zone":"D01","province":"ON","entry":"YYZ"},"M1E":{"zone":"D01","province":"ON","entry":"YYZ"},"M1G":{"zone":"D01","province":"ON","entry":"YYZ"},"M1H":{"zone":"D01","province":"ON","entry":"YYZ"},"M1J":{"zone":"D01","province":"ON","entry":"YYZ"},"M1K":{"zone":"D01","province":"ON","entry":"YYZ"},"M1L":{"zone":"D01","province":"ON","entry":"YYZ"},"M1M":{"zone":"D01","province":"ON","entry":"YYZ"},"M1N":{"zone":"D01","province":"ON","entry":"YYZ"},"M1P":{"zone":"D01","province":"ON","entry":"YYZ"},"M1R":{"zone":"D01","province":"ON","entry":"YYZ"},"M1S":{"zone":"D01","province":"ON","entry":"YYZ"},"M1T":{"zone":"D01","province":"ON","entry":"YYZ"},"M1V":{"zone":"D01","province":"ON","entry":"YYZ"},"M1W":{"zone":"D01","province":"ON","entry":"YYZ"},"M1X":{"zone":"D01","province":"ON","entry":"YYZ"},"M2H":{"zone":"D01","province":"ON","entry":"YYZ"},"M2J":{"zone":"D01","province":"ON","entry":"YYZ"},"M2K":{"zone":"D01","province":"ON","entry":"YYZ"},"M2L":{"zone":"D01","province":"ON","entry":"YYZ"},"M2M":{"zone":"D01","province":"ON","entry":"YYZ"},"M2N":{"zone":"D01","province":"ON","entry":"YYZ"},"M2P":{"zone":"D01","province":"ON","entry":"YYZ"},"M2R":{"zone":"D01","province":"ON","entry":"YYZ"},"M3A":{"zone":"D01","province":"ON","entry":"YYZ"},"M3B":{"zone":"D01","province":"ON","entry":"YYZ"},"M3C":{"zone":"D01","province":"ON","entry":"YYZ"},"M3H":{"zone":"D01","province":"ON","entry":"YYZ"},"M3J":{"zone":"D01","province":"ON","entry":"YYZ"},"M3K":{"zone":"D01","province":"ON","entry":"YYZ"},"M3L":{"zone":"D01","province":"ON","entry":"YYZ"},"M3M":{"zone":"D01","province":"ON","entry":"YYZ"},"M3N":{"zone":"D01","province":"ON","entry":"YYZ"},"M4A":{"zone":"D01","province":"ON","entry":"YYZ"},"M4B":{"zone":"D01","province":"ON","entry":"YYZ"},"M4C":{"zone":"D01","province":"ON","entry":"YYZ"},"M4E":{"zone":"D01","province":"ON","entry":"YYZ"},"M4G":{"zone":"D01","province":"ON","entry":"YYZ"},"M4H":{"zone":"D01","province":"ON","entry":"YYZ"},"M4J":{"zone":"D01","province":"ON","entry":"YYZ"},"M4K":{"zone":"D01","province":"ON","entry":"YYZ"},"M4L":{"zone":"D01","province":"ON","entry":"YYZ"},"M4M":{"zone":"D01","province":"ON","entry":"YYZ"},"M4N":{"zone":"D01","province":"ON","entry":"YYZ"},"M4P":{"zone":"D01","province":"ON","entry":"YYZ"},"M4R":{"zone":"D01","province":"ON","entry":"YYZ"},"M4S":{"zone":"D01","province":"ON","entry":"YYZ"},"M4T":{"zone":"D01","province":"ON","entry":"YYZ"},"M4V":{"zone":"D01","province":"ON","entry":"YYZ"},"M4W":{"zone":"D01","province":"ON","entry":"YYZ"},"M4X":{"zone":"D01","province":"ON","entry":"YYZ"},"M4Y":{"zone":"D01","province":"ON","entry":"YYZ"},"M5A":{"zone":"D01","province":"ON","entry":"YYZ"},"M5B":{"zone":"D01","province":"ON","entry":"YYZ"},"M5C":{"zone":"D01","province":"ON","entry":"YYZ"},"M5E":{"zone":"D01","province":"ON","entry":"YYZ"},"M5G":{"zone":"D01","province":"ON","entry":"YYZ"},"M5H":{"zone":"D01","province":"ON","entry":"YYZ"},"M5J":{"zone":"D01","province":"ON","entry":"YYZ"},"M5K":{"zone":"D01","province":"ON","entry":"YYZ"},"M5L":{"zone":"D01","province":"ON","entry":"YYZ"},"M5M":{"zone":"D01","province":"ON","entry":"YYZ"},"M5N":{"zone":"D01","province":"ON","entry":"YYZ"},"M5P":{"zone":"D01","province":"ON","entry":"YYZ"},"M5R":{"zone":"D01","province":"ON","entry":"YYZ"},"M5S":{"zone":"D01","province":"ON","entry":"YYZ"},"M5T":{"zone":"D01","province":"ON","entry":"YYZ"},"M5V":{"zone":"D01","province":"ON","entry":"YYZ"},"M5W":{"zone":"D01","province":"ON","entry":"YYZ"},"M5X":{"zone":"D01","province":"ON","entry":"YYZ"},"M6A":{"zone":"D01","province":"ON","entry":"YYZ"},"M6B":{"zone":"D01","province":"ON","entry":"YYZ"},"M6C":{"zone":"D01","province":"ON","entry":"YYZ"},"M6E":{"zone":"D01","province":"ON","entry":"YYZ"},"M6G":{"zone":"D01","province":"ON","entry":"YYZ"},"M6H":{"zone":"D01","province":"ON","entry":"YYZ"},"M6J":{"zone":"D01","province":"ON","entry":"YYZ"},"M6K":{"zone":"D01","province":"ON","entry":"YYZ"},"M6L":{"zone":"D01","province":"ON","entry":"YYZ"},"M6M":{"zone":"D01","province":"ON","entry":"YYZ"},"M6N":{"zone":"D01","province":"ON","entry":"YYZ"},"M6P":{"zone":"D01","province":"ON","entry":"YYZ"},"M6R":{"zone":"D01","province":"ON","entry":"YYZ"},"M6S":{"zone":"D01","province":"ON","entry":"YYZ"},"M7A":{"zone":"D01","province":"ON","entry":"YYZ"},"M7R":{"zone":"D01","province":"ON","entry":"YYZ"},"M7Y":{"zone":"D01","province":"ON","entry":"YYZ"},"M8V":{"zone":"D01","province":"ON","entry":"YYZ"},"M8W":{"zone":"D01","province":"ON","entry":"YYZ"},"M8X":{"zone":"D01","province":"ON","entry":"YYZ"},"M8Y":{"zone":"D01","province":"ON","entry":"YYZ"},"M8Z":{"zone":"D01","province":"ON","entry":"YYZ"},"M9A":{"zone":"D01","province":"ON","entry":"YYZ"},"M9B":{"zone":"D01","province":"ON","entry":"YYZ"},"M9C":{"zone":"D01","province":"ON","entry":"YYZ"},"M9L":{"zone":"D01","province":"ON","entry":"YYZ"},"M9M":{"zone":"D01","province":"ON","entry":"YYZ"},"M9N":{"zone":"D01","province":"ON","entry":"YYZ"},"M9P":{"zone":"D01","province":"ON","entry":"YYZ"},"M9R":{"zone":"D01","province":"ON","entry":"YYZ"},"M9V":{"zone":"D01","province":"ON","entry":"YYZ"},"M9W":{"zone":"D01","province":"ON","entry":"YYZ"},"N0A":{"zone":"D04","province":"ON","entry":"YYZ"},"N0B":{"zone":"D03","province":"ON","entry":"YYZ"},"N0C":{"zone":"D04","province":"ON","entry":"YYZ"},"N0E":{"zone":"D04","province":"ON","entry":"YYZ"},"N0G":{"zone":"D04","province":"ON","entry":"YYZ"},"N0H":{"zone":"D04","province":"ON","entry":"YYZ"},"N0J":{"zone":"D03","province":"ON","entry":"YYZ"},"N0K":{"zone":"D04","province":"ON","entry":"YYZ"},"N0L":{"zone":"D04","province":"ON","entry":"YYZ"},"N0M":{"zone":"D04","province":"ON","entry":"YYZ"},"N0N":{"zone":"D04","province":"ON","entry":"YYZ"},"N0P":{"zone":"D05","province":"ON","entry":"YYZ"},"N0R":{"zone":"D05","province":"ON","entry":"YYZ"},"N1A":{"zone":"D03","province":"ON","entry":"YYZ"},"N1C":{"zone":"D02","province":"ON","entry":"YYZ"},"N1E":{"zone":"D02","province":"ON","entry":"YYZ"},"N1G":{"zone":"D02","province":"ON","entry":"YYZ"},"N1H":{"zone":"D02","province":"ON","entry":"YYZ"},"N1K":{"zone":"D02","province":"ON","entry":"YYZ"},"N1L":{"zone":"D02","province":"ON","entry":"YYZ"},"N1M":{"zone":"D02","province":"ON","entry":"YYZ"},"N1P":{"zone":"D02","province":"ON","entry":"YYZ"},"N1R":{"zone":"D02","province":"ON","entry":"YYZ"},"N1S":{"zone":"D02","province":"ON","entry":"YYZ"},"N1T":{"zone":"D02","province":"ON","entry":"YYZ"},"N2A":{"zone":"D02","province":"ON","entry":"YYZ"},"N2B":{"zone":"D02","province":"ON","entry":"YYZ"},"N2C":{"zone":"D02","province":"ON","entry":"YYZ"},"N2E":{"zone":"D02","province":"ON","entry":"YYZ"},"N2G":{"zone":"D02","province":"ON","entry":"YYZ"},"N2H":{"zone":"D02","province":"ON","entry":"YYZ"},"N2J":{"zone":"D02","province":"ON","entry":"YYZ"},"N2K":{"zone":"D02","province":"ON","entry":"YYZ"},"N2L":{"zone":"D02","province":"ON","entry":"YYZ"},"N2M":{"zone":"D02","province":"ON","entry":"YYZ"},"N2N":{"zone":"D02","province":"ON","entry":"YYZ"},"N2P":{"zone":"D02","province":"ON","entry":"YYZ"},"N2R":{"zone":"D02","province":"ON","entry":"YYZ"},"N2T":{"zone":"D02","province":"ON","entry":"YYZ"},"N2V":{"zone":"D02","province":"ON","entry":"YYZ"},"N2Z":{"zone":"D03","province":"ON","entry":"YYZ"},"N3A":{"zone":"D04","province":"ON","entry":"YYZ"},"N3B":{"zone":"D03","province":"ON","entry":"YYZ"},"N3C":{"zone":"D02","province":"ON","entry":"YYZ"},"N3E":{"zone":"D02","province":"ON","entry":"YYZ"},"N3H":{"zone":"D02","province":"ON","entry":"YYZ"},"N3L":{"zone":"D02","province":"ON","entry":"YYZ"},"N3P":{"zone":"D02","province":"ON","entry":"YYZ"},"N3R":{"zone":"D02","province":"ON","entry":"YYZ"},"N3S":{"zone":"D02","province":"ON","entry":"YYZ"},"N3T":{"zone":"D02","province":"ON","entry":"YYZ"},"N3V":{"zone":"D02","province":"ON","entry":"YYZ"},"N3W":{"zone":"D03","province":"ON","entry":"YYZ"},"N3Y":{"zone":"D03","province":"ON","entry":"YYZ"},"N4B":{"zone":"D03","province":"ON","entry":"YYZ"},"N4G":{"zone":"D03","province":"ON","entry":"YYZ"},"N4K":{"zone":"D03","province":"ON","entry":"YYZ"},"N4L":{"zone":"D03","province":"ON","entry":"YYZ"},"N4N":{"zone":"D03","province":"ON","entry":"YYZ"},"N4S":{"zone":"D03","province":"ON","entry":"YYZ"},"N4T":{"zone":"D03","province":"ON","entry":"YYZ"},"N4V":{"zone":"D03","province":"ON","entry":"YYZ"},"N4W":{"zone":"D03","province":"ON","entry":"YYZ"},"N4X":{"zone":"D03","province":"ON","entry":"YYZ"},"N4Z":{"zone":"D03","province":"ON","entry":"YYZ"},"N5A":{"zone":"D03","province":"ON","entry":"YYZ"},"N5C":{"zone":"D03","province":"ON","entry":"YYZ"},"N5H":{"zone":"D03","province":"ON","entry":"YYZ"},"N5L":{"zone":"D03","province":"ON","entry":"YYZ"},"N5P":{"zone":"D03","province":"ON","entry":"YYZ"},"N5R":{"zone":"D03","province":"ON","entry":"YYZ"},"N5V":{"zone":"D03","province":"ON","entry":"YYZ"},"N5W":{"zone":"D03","province":"ON","entry":"YYZ"},"N5X":{"zone":"D03","province":"ON","entry":"YYZ"},"N5Y":{"zone":"D03","province":"ON","entry":"YYZ"},"N5Z":{"zone":"D03","province":"ON","entry":"YYZ"},"N6A":{"zone":"D03","province":"ON","entry":"YYZ"},"N6B":{"zone":"D03","province":"ON","entry":"YYZ"},"N6C":{"zone":"D03","province":"ON","entry":"YYZ"},"N6E":{"zone":"D03","province":"ON","entry":"YYZ"},"N6G":{"zone":"D03","province":"ON","entry":"YYZ"},"N6H":{"zone":"D03","province":"ON","entry":"YYZ"},"N6J":{"zone":"D03","province":"ON","entry":"YYZ"},"N6K":{"zone":"D03","province":"ON","entry":"YYZ"},"N6L":{"zone":"D03","province":"ON","entry":"YYZ"},"N6M":{"zone":"D03","province":"ON","entry":"YYZ"},"N6N":{"zone":"D03","province":"ON","entry":"YYZ"},"N6P":{"zone":"D03","province":"ON","entry":"YYZ"},"N7A":{"zone":"D04","province":"ON","entry":"YYZ"},"N7G":{"zone":"D03","province":"ON","entry":"YYZ"},"N7L":{"zone":"D04","province":"ON","entry":"YYZ"},"N7M":{"zone":"D04","province":"ON","entry":"YYZ"},"N7S":{"zone":"D04","province":"ON","entry":"YYZ"},"N7T":{"zone":"D04","province":"ON","entry":"YYZ"},"N7V":{"zone":"D04","province":"ON","entry":"YYZ"},"N7W":{"zone":"D04","province":"ON","entry":"YYZ"},"N7X":{"zone":"D04","province":"ON","entry":"YYZ"},"N8A":{"zone":"D04","province":"ON","entry":"YYZ"},"N8H":{"zone":"D04","province":"ON","entry":"YYZ"},"N8M":{"zone":"D04","province":"ON","entry":"YYZ"},"N8N":{"zone":"D04","province":"ON","entry":"YYZ"},"N8P":{"zone":"D04","province":"ON","entry":"YYZ"},"N8R":{"zone":"D04","province":"ON","entry":"YYZ"},"N8S":{"zone":"D04","province":"ON","entry":"YYZ"},"N8T":{"zone":"D04","province":"ON","entry":"YYZ"},"N8V":{"zone":"D04","province":"ON","entry":"YYZ"},"N8W":{"zone":"D04","province":"ON","entry":"YYZ"},"N8X":{"zone":"D04","province":"ON","entry":"YYZ"},"N8Y":{"zone":"D04","province":"ON","entry":"YYZ"},"N9A":{"zone":"D04","province":"ON","entry":"YYZ"},"N9B":{"zone":"D04","province":"ON","entry":"YYZ"},"N9C":{"zone":"D04","province":"ON","entry":"YYZ"},"N9E":{"zone":"D04","province":"ON","entry":"YYZ"},"N9G":{"zone":"D04","province":"ON","entry":"YYZ"},"N9H":{"zone":"D04","province":"ON","entry":"YYZ"},"N9J":{"zone":"D04","province":"ON","entry":"YYZ"},"N9K":{"zone":"D04","province":"ON","entry":"YYZ"},"N9V":{"zone":"D04","province":"ON","entry":"YYZ"},"N9Y":{"zone":"D04","province":"ON","entry":"YYZ"},"P0A":{"zone":"D05","province":"ON","entry":"YYZ"},"P0B":{"zone":"D04","province":"ON","entry":"YYZ"},"P0C":{"zone":"D04","province":"ON","entry":"YYZ"},"P0E":{"zone":"D04","province":"ON","entry":"YYZ"},"P0G":{"zone":"D06","province":"ON","entry":"YYZ"},"P0H":{"zone":"D06","province":"ON","entry":"YYZ"},"P0J":{"zone":"D07","province":"ON","entry":"YYZ"},"P0K":{"zone":"D07","province":"ON","entry":"YYZ"},"P0L":{"zone":"D08","province":"ON","entry":"YYZ"},"P0M":{"zone":"D08","province":"ON","entry":"YYZ"},"P0N":{"zone":"D08","province":"ON","entry":"YYZ"},"P0P":{"zone":"D07","province":"ON","entry":"YYZ"},"P0R":{"zone":"D07","province":"ON","entry":"YYZ"},"P0S":{"zone":"D08","province":"ON","entry":"YYZ"},"P0T":{"zone":"D15","province":"ON","entry":"YYZ"},"P0V":{"zone":"D12","province":"ON","entry":"YYZ"},"P0W":{"zone":"D11","province":"ON","entry":"YYZ"},"P0X":{"zone":"D12","province":"ON","entry":"YYZ"},"P0Y":{"zone":"D12","province":"ON","entry":"YYZ"},"P1A":{"zone":"D04","province":"ON","entry":"YYZ"},"P1B":{"zone":"D04","province":"ON","entry":"YYZ"},"P1C":{"zone":"D04","province":"ON","entry":"YYZ"},"P1H":{"zone":"D05","province":"ON","entry":"YYZ"},"P1L":{"zone":"D04","province":"ON","entry":"YYZ"},"P1P":{"zone":"D04","province":"ON","entry":"YYZ"},"P2A":{"zone":"D05","province":"ON","entry":"YYZ"},"P2B":{"zone":"D06","province":"ON","entry":"YYZ"},"P2N":{"zone":"D07","province":"ON","entry":"YYZ"},"P3A":{"zone":"D04","province":"ON","entry":"YYZ"},"P3B":{"zone":"D04","province":"ON","entry":"YYZ"},"P3C":{"zone":"D04","province":"ON","entry":"YYZ"},"P3E":{"zone":"D04","province":"ON","entry":"YYZ"},"P3G":{"zone":"D04","province":"ON","entry":"YYZ"},"P3L":{"zone":"D06","province":"ON","entry":"YYZ"},"P3N":{"zone":"D06","province":"ON","entry":"YYZ"},"P3P":{"zone":"D06","province":"ON","entry":"YYZ"},"P3Y":{"zone":"D04","province":"ON","entry":"YYZ"},"P4N":{"zone":"D08","province":"ON","entry":"YYZ"},"P4P":{"zone":"D08","province":"ON","entry":"YYZ"},"P4R":{"zone":"D08","province":"ON","entry":"YYZ"},"P5A":{"zone":"D07","province":"ON","entry":"YYZ"},"P5E":{"zone":"D07","province":"ON","entry":"YYZ"},"P5N":{"zone":"D08","province":"ON","entry":"YYZ"},"P6A":{"zone":"D06","province":"ON","entry":"YYZ"},"P6B":{"zone":"D06","province":"ON","entry":"YYZ"},"P6C":{"zone":"D06","province":"ON","entry":"YYZ"},"P7A":{"zone":"D09","province":"ON","entry":"YYZ"},"P7B":{"zone":"D09","province":"ON","entry":"YYZ"},"P7C":{"zone":"D09","province":"ON","entry":"YYZ"},"P7E":{"zone":"D09","province":"ON","entry":"YYZ"},"P7G":{"zone":"D09","province":"ON","entry":"YYZ"},"P7J":{"zone":"D09","province":"ON","entry":"YYZ"},"P7K":{"zone":"D09","province":"ON","entry":"YYZ"},"P7L":{"zone":"D15","province":"ON","entry":"YYZ"},"P8N":{"zone":"D11","province":"ON","entry":"YYZ"},"P8T":{"zone":"D11","province":"ON","entry":"YYZ"},"P9A":{"zone":"D11","province":"ON","entry":"YYZ"},"P9N":{"zone":"D12","province":"ON","entry":"YYZ"},"R0A":{"zone":"D11","province":"MB","entry":"YYZ"},"R0B":{"zone":"D12","province":"MB","entry":"YVR"},"R0C":{"zone":"D11","province":"MB","entry":"YYZ"},"R0E":{"zone":"D11","province":"MB","entry":"YYZ"},"R0G":{"zone":"D11","province":"MB","entry":"YYZ"},"R0H":{"zone":"D11","province":"MB","entry":"YYZ"},"R0J":{"zone":"D11","province":"MB","entry":"YYZ"},"R0K":{"zone":"D11","province":"MB","entry":"YYZ"},"R0L":{"zone":"D12","province":"MB","entry":"YYZ"},"R0M":{"zone":"D11","province":"MB","entry":"YYZ"},"R1A":{"zone":"D10","province":"MB","entry":"YYZ"},"R1B":{"zone":"D11","province":"MB","entry":"YYZ"},"R1C":{"zone":"D11","province":"MB","entry":"YYZ"},"R1N":{"zone":"D10","province":"MB","entry":"YYZ"},"R2C":{"zone":"D09","province":"MB","entry":"YYZ"},"R2E":{"zone":"D09","province":"MB","entry":"YYZ"},"R2G":{"zone":"D09","province":"MB","entry":"YYZ"},"R2H":{"zone":"D09","province":"MB","entry":"YYZ"},"R2J":{"zone":"D09","province":"MB","entry":"YYZ"},"R2K":{"zone":"D09","province":"MB","entry":"YYZ"},"R2L":{"zone":"D09","province":"MB","entry":"YYZ"},"R2M":{"zone":"D09","province":"MB","entry":"YYZ"},"R2N":{"zone":"D09","province":"MB","entry":"YYZ"},"R2P":{"zone":"D09","province":"MB","entry":"YYZ"},"R2R":{"zone":"D09","province":"MB","entry":"YYZ"},"R2V":{"zone":"D09","province":"MB","entry":"YYZ"},"R2W":{"zone":"D09","province":"MB","entry":"YYZ"},"R2X":{"zone":"D09","province":"MB","entry":"YYZ"},"R2Y":{"zone":"D09","province":"MB","entry":"YYZ"},"R3A":{"zone":"D09","province":"MB","entry":"YYZ"},"R3B":{"zone":"D09","province":"MB","entry":"YYZ"},"R3C":{"zone":"D09","province":"MB","entry":"YYZ"},"R3E":{"zone":"D09","province":"MB","entry":"YYZ"},"R3G":{"zone":"D09","province":"MB","entry":"YYZ"},"R3H":{"zone":"D09","province":"MB","entry":"YYZ"},"R3J":{"zone":"D09","province":"MB","entry":"YYZ"},"R3K":{"zone":"D09","province":"MB","entry":"YYZ"},"R3L":{"zone":"D09","province":"MB","entry":"YYZ"},"R3M":{"zone":"D09","province":"MB","entry":"YYZ"},"R3N":{"zone":"D09","province":"MB","entry":"YYZ"},"R3P":{"zone":"D09","province":"MB","entry":"YYZ"},"R3R":{"zone":"D09","province":"MB","entry":"YYZ"},"R3S":{"zone":"D09","province":"MB","entry":"YYZ"},"R3T":{"zone":"D09","province":"MB","entry":"YYZ"},"R3V":{"zone":"D09","province":"MB","entry":"YYZ"},"R3W":{"zone":"D09","province":"MB","entry":"YYZ"},"R3X":{"zone":"D09","province":"MB","entry":"YYZ"},"R3Y":{"zone":"D09","province":"MB","entry":"YYZ"},"R4A":{"zone":"D09","province":"MB","entry":"YYZ"},"R4G":{"zone":"D10","province":"MB","entry":"YYZ"},"R4H":{"zone":"D09","province":"MB","entry":"YYZ"},"R4J":{"zone":"D09","province":"MB","entry":"YYZ"},"R4K":{"zone":"D11","province":"MB","entry":"YYZ"},"R4L":{"zone":"D11","province":"MB","entry":"YYZ"},"R5A":{"zone":"D11","province":"MB","entry":"YYZ"},"R5G":{"zone":"D10","province":"MB","entry":"YYZ"},"R5H":{"zone":"D10","province":"MB","entry":"YYZ"},"R5J":{"zone":"D11","province":"MB","entry":"YYZ"},"R5K":{"zone":"D11","province":"MB","entry":"YYZ"},"R5L":{"zone":"D11","province":"MB","entry":"YYZ"},"R5M":{"zone":"D11","province":"MB","entry":"YYZ"},"R5N":{"zone":"D11","province":"MB","entry":"YYZ"},"R5P":{"zone":"D11","province":"MB","entry":"YYZ"},"R5R":{"zone":"D11","province":"MB","entry":"YYZ"},"R5T":{"zone":"D11","province":"MB","entry":"YYZ"},"R6M":{"zone":"D11","province":"MB","entry":"YYZ"},"R6W":{"zone":"D11","province":"MB","entry":"YYZ"},"R7A":{"zone":"D10","province":"MB","entry":"YYZ"},"R7B":{"zone":"D10","province":"MB","entry":"YYZ"},"R7C":{"zone":"D10","province":"MB","entry":"YYZ"},"R7N":{"zone":"D11","province":"MB","entry":"YYZ"},"R8A":{"zone":"D12","province":"MB","entry":"YVR"},"R8N":{"zone":"D12","province":"MB","entry":"YVR"},"R9A":{"zone":"D12","province":"MB","entry":"YVR"},"S0A":{"zone":"D11","province":"SK","entry":"YVR"},"S0C":{"zone":"D11","province":"SK","entry":"YYZ"},"S0E":{"zone":"D11","province":"SK","entry":"YVR"},"S0G":{"zone":"D11","province":"SK","entry":"YVR"},"S0H":{"zone":"D11","province":"SK","entry":"YVR"},"S0J":{"zone":"D12","province":"SK","entry":"YVR"},"S0K":{"zone":"D11","province":"SK","entry":"YVR"},"S0L":{"zone":"D11","province":"SK","entry":"YVR"},"S0M":{"zone":"D12","province":"SK","entry":"YVR"},"S0N":{"zone":"D11","province":"SK","entry":"YVR"},"S0P":{"zone":"D12","province":"SK","entry":"YVR"},"S2V":{"zone":"D11","province":"SK","entry":"YVR"},"S3N":{"zone":"D11","province":"SK","entry":"YVR"},"S4A":{"zone":"D10","province":"SK","entry":"YVR"},"S4H":{"zone":"D10","province":"SK","entry":"YVR"},"S4K":{"zone":"D11","province":"SK","entry":"YVR"},"S4L":{"zone":"D10","province":"SK","entry":"YYZ"},"S4M":{"zone":"D10","province":"SK","entry":"YYZ"},"S4N":{"zone":"D10","province":"SK","entry":"YYZ"},"S4P":{"zone":"D10","province":"SK","entry":"YYZ"},"S4R":{"zone":"D10","province":"SK","entry":"YYZ"},"S4S":{"zone":"D10","province":"SK","entry":"YYZ"},"S4T":{"zone":"D10","province":"SK","entry":"YYZ"},"S4V":{"zone":"D10","province":"SK","entry":"YYZ"},"S4W":{"zone":"D10","province":"SK","entry":"YYZ"},"S4X":{"zone":"D10","province":"SK","entry":"YYZ"},"S4Y":{"zone":"D10","province":"SK","entry":"YYZ"},"S4Z":{"zone":"D10","province":"SK","entry":"YYZ"},"S6H":{"zone":"D10","province":"SK","entry":"YVR"},"S6J":{"zone":"D10","province":"SK","entry":"YVR"},"S6K":{"zone":"D10","province":"SK","entry":"YVR"},"S6V":{"zone":"D10","province":"SK","entry":"YVR"},"S6W":{"zone":"D10","province":"SK","entry":"YVR"},"S6X":{"zone":"D10","province":"SK","entry":"YVR"},"S7A":{"zone":"D10","province":"SK","entry":"YVR"},"S7B":{"zone":"D11","province":"SK","entry":"YVR"},"S7C":{"zone":"D11","province":"SK","entry":"YVR"},"S7H":{"zone":"D10","province":"SK","entry":"YVR"},"S7J":{"zone":"D10","province":"SK","entry":"YVR"},"S7K":{"zone":"D10","province":"SK","entry":"YVR"},"S7L":{"zone":"D10","province":"SK","entry":"YVR"},"S7M":{"zone":"D10","province":"SK","entry":"YVR"},"S7N":{"zone":"D10","province":"SK","entry":"YVR"},"S7P":{"zone":"D10","province":"SK","entry":"YVR"},"S7R":{"zone":"D10","province":"SK","entry":"YVR"},"S7S":{"zone":"D10","province":"SK","entry":"YVR"},"S7T":{"zone":"D10","province":"SK","entry":"YVR"},"S7V":{"zone":"D10","province":"SK","entry":"YVR"},"S7W":{"zone":"D10","province":"SK","entry":"YVR"},"S9A":{"zone":"D10","province":"SK","entry":"YVR"},"S9H":{"zone":"D10","province":"SK","entry":"YVR"},"S9V":{"zone":"D10","province":"SK","entry":"YVR"},"S9X":{"zone":"D11","province":"SK","entry":"YVR"},"T0A":{"zone":"D10","province":"AB","entry":"YVR"},"T0B":{"zone":"D10","province":"AB","entry":"YVR"},"T0C":{"zone":"D10","province":"AB","entry":"YVR"},"T0E":{"zone":"D10","province":"AB","entry":"YVR"},"T0G":{"zone":"D10","province":"AB","entry":"YVR"},"T0H":{"zone":"D11","province":"AB","entry":"YVR"},"T0J":{"zone":"D10","province":"AB","entry":"YVR"},"T0K":{"zone":"D10","province":"AB","entry":"YVR"},"T0L":{"zone":"D10","province":"AB","entry":"YVR"},"T0M":{"zone":"D10","province":"AB","entry":"YVR"},"T0P":{"zone":"D11","province":"AB","entry":"YVR"},"T0V":{"zone":"D11","province":"AB","entry":"YVR"},"T1A":{"zone":"D10","province":"AB","entry":"YVR"},"T1B":{"zone":"D10","province":"AB","entry":"YVR"},"T1C":{"zone":"D10","province":"AB","entry":"YVR"},"T1G":{"zone":"D10","province":"AB","entry":"YVR"},"T1H":{"zone":"D09","province":"AB","entry":"YVR"},"T1J":{"zone":"D09","province":"AB","entry":"YVR"},"T1K":{"zone":"D09","province":"AB","entry":"YVR"},"T1L":{"zone":"D10","province":"AB","entry":"YVR"},"T1M":{"zone":"D10","province":"AB","entry":"YVR"},"T1P":{"zone":"D10","province":"AB","entry":"YVR"},"T1R":{"zone":"D09","province":"AB","entry":"YVR"},"T1S":{"zone":"D10","province":"AB","entry":"YVR"},"T1V":{"zone":"D09","province":"AB","entry":"YVR"},"T1W":{"zone":"D10","province":"AB","entry":"YVR"},"T1X":{"zone":"D10","province":"AB","entry":"YVR"},"T1Y":{"zone":"D09","province":"AB","entry":"YVR"},"T1Z":{"zone":"D10","province":"AB","entry":"YVR"},"T2A":{"zone":"D09","province":"AB","entry":"YVR"},"T2B":{"zone":"D09","province":"AB","entry":"YVR"},"T2C":{"zone":"D09","province":"AB","entry":"YVR"},"T2E":{"zone":"D09","province":"AB","entry":"YVR"},"T2G":{"zone":"D09","province":"AB","entry":"YVR"},"T2H":{"zone":"D09","province":"AB","entry":"YVR"},"T2J":{"zone":"D09","province":"AB","entry":"YVR"},"T2K":{"zone":"D09","province":"AB","entry":"YVR"},"T2L":{"zone":"D09","province":"AB","entry":"YVR"},"T2M":{"zone":"D09","province":"AB","entry":"YVR"},"T2N":{"zone":"D09","province":"AB","entry":"YVR"},"T2P":{"zone":"D09","province":"AB","entry":"YVR"},"T2R":{"zone":"D09","province":"AB","entry":"YVR"},"T2S":{"zone":"D09","province":"AB","entry":"YVR"},"T2T":{"zone":"D09","province":"AB","entry":"YVR"},"T2V":{"zone":"D09","province":"AB","entry":"YVR"},"T2W":{"zone":"D09","province":"AB","entry":"YVR"},"T2X":{"zone":"D09","province":"AB","entry":"YVR"},"T2Y":{"zone":"D09","province":"AB","entry":"YVR"},"T2Z":{"zone":"D09","province":"AB","entry":"YVR"},"T3A":{"zone":"D09","province":"AB","entry":"YVR"},"T3B":{"zone":"D09","province":"AB","entry":"YVR"},"T3C":{"zone":"D09","province":"AB","entry":"YVR"},"T3E":{"zone":"D09","province":"AB","entry":"YVR"},"T3G":{"zone":"D09","province":"AB","entry":"YVR"},"T3H":{"zone":"D09","province":"AB","entry":"YVR"},"T3J":{"zone":"D09","province":"AB","entry":"YVR"},"T3K":{"zone":"D09","province":"AB","entry":"YVR"},"T3L":{"zone":"D09","province":"AB","entry":"YVR"},"T3M":{"zone":"D09","province":"AB","entry":"YVR"},"T3N":{"zone":"D09","province":"AB","entry":"YVR"},"T3P":{"zone":"D10","province":"AB","entry":"YVR"},"T3R":{"zone":"D09","province":"AB","entry":"YVR"},"T3S":{"zone":"D09","province":"AB","entry":"YVR"},"T3T":{"zone":"D09","province":"AB","entry":"YVR"},"T3Z":{"zone":"D10","province":"AB","entry":"YVR"},"T4A":{"zone":"D09","province":"AB","entry":"YVR"},"T4B":{"zone":"D09","province":"AB","entry":"YVR"},"T4C":{"zone":"D09","province":"AB","entry":"YVR"},"T4E":{"zone":"D09","province":"AB","entry":"YVR"},"T4G":{"zone":"D09","province":"AB","entry":"YVR"},"T4H":{"zone":"D09","province":"AB","entry":"YVR"},"T4J":{"zone":"D09","province":"AB","entry":"YVR"},"T4L":{"zone":"D09","province":"AB","entry":"YVR"},"T4M":{"zone":"D09","province":"AB","entry":"YVR"},"T4N":{"zone":"D09","province":"AB","entry":"YVR"},"T4P":{"zone":"D09","province":"AB","entry":"YVR"},"T4R":{"zone":"D09","province":"AB","entry":"YVR"},"T4S":{"zone":"D09","province":"AB","entry":"YVR"},"T4T":{"zone":"D09","province":"AB","entry":"YVR"},"T4V":{"zone":"D09","province":"AB","entry":"YVR"},"T4X":{"zone":"D09","province":"AB","entry":"YVR"},"T5A":{"zone":"D09","province":"AB","entry":"YVR"},"T5B":{"zone":"D09","province":"AB","entry":"YVR"},"T5C":{"zone":"D09","province":"AB","entry":"YVR"},"T5E":{"zone":"D09","province":"AB","entry":"YVR"},"T5G":{"zone":"D09","province":"AB","entry":"YVR"},"T5H":{"zone":"D09","province":"AB","entry":"YVR"},"T5J":{"zone":"D09","province":"AB","entry":"YVR"},"T5K":{"zone":"D09","province":"AB","entry":"YVR"},"T5L":{"zone":"D09","province":"AB","entry":"YVR"},"T5M":{"zone":"D09","province":"AB","entry":"YVR"},"T5N":{"zone":"D09","province":"AB","entry":"YVR"},"T5P":{"zone":"D09","province":"AB","entry":"YVR"},"T5R":{"zone":"D09","province":"AB","entry":"YVR"},"T5S":{"zone":"D09","province":"AB","entry":"YVR"},"T5T":{"zone":"D09","province":"AB","entry":"YVR"},"T5V":{"zone":"D09","province":"AB","entry":"YVR"},"T5W":{"zone":"D09","province":"AB","entry":"YVR"},"T5X":{"zone":"D09","province":"AB","entry":"YVR"},"T5Y":{"zone":"D09","province":"AB","entry":"YVR"},"T5Z":{"zone":"D09","province":"AB","entry":"YVR"},"T6A":{"zone":"D09","province":"AB","entry":"YVR"},"T6B":{"zone":"D09","province":"AB","entry":"YVR"},"T6C":{"zone":"D09","province":"AB","entry":"YVR"},"T6E":{"zone":"D09","province":"AB","entry":"YVR"},"T6G":{"zone":"D09","province":"AB","entry":"YVR"},"T6H":{"zone":"D09","province":"AB","entry":"YVR"},"T6J":{"zone":"D09","province":"AB","entry":"YVR"},"T6K":{"zone":"D09","province":"AB","entry":"YVR"},"T6L":{"zone":"D09","province":"AB","entry":"YVR"},"T6M":{"zone":"D09","province":"AB","entry":"YVR"},"T6N":{"zone":"D09","province":"AB","entry":"YVR"},"T6P":{"zone":"D09","province":"AB","entry":"YVR"},"T6R":{"zone":"D09","province":"AB","entry":"YVR"},"T6S":{"zone":"D09","province":"AB","entry":"YVR"},"T6T":{"zone":"D09","province":"AB","entry":"YVR"},"T6V":{"zone":"D09","province":"AB","entry":"YVR"},"T6W":{"zone":"D09","province":"AB","entry":"YVR"},"T6X":{"zone":"D09","province":"AB","entry":"YVR"},"T6Y":{"zone":"D09","province":"AB","entry":"YVR"},"T7A":{"zone":"D09","province":"AB","entry":"YVR"},"T7E":{"zone":"D09","province":"AB","entry":"YVR"},"T7N":{"zone":"D09","province":"AB","entry":"YVR"},"T7P":{"zone":"D09","province":"AB","entry":"YVR"},"T7S":{"zone":"D09","province":"AB","entry":"YVR"},"T7V":{"zone":"D09","province":"AB","entry":"YVR"},"T7X":{"zone":"D09","province":"AB","entry":"YVR"},"T7Y":{"zone":"D09","province":"AB","entry":"YVR"},"T7Z":{"zone":"D09","province":"AB","entry":"YVR"},"T8A":{"zone":"D09","province":"AB","entry":"YVR"},"T8B":{"zone":"D09","province":"AB","entry":"YVR"},"T8C":{"zone":"D09","province":"AB","entry":"YVR"},"T8E":{"zone":"D09","province":"AB","entry":"YVR"},"T8G":{"zone":"D09","province":"AB","entry":"YVR"},"T8H":{"zone":"D09","province":"AB","entry":"YVR"},"T8L":{"zone":"D09","province":"AB","entry":"YVR"},"T8N":{"zone":"D09","province":"AB","entry":"YVR"},"T8R":{"zone":"D09","province":"AB","entry":"YVR"},"T8S":{"zone":"D10","province":"AB","entry":"YVR"},"T8T":{"zone":"D09","province":"AB","entry":"YVR"},"T8V":{"zone":"D09","province":"AB","entry":"YVR"},"T8W":{"zone":"D09","province":"AB","entry":"YVR"},"T8X":{"zone":"D09","province":"AB","entry":"YVR"},"T9A":{"zone":"D09","province":"AB","entry":"YVR"},"T9C":{"zone":"D09","province":"AB","entry":"YVR"},"T9E":{"zone":"D09","province":"AB","entry":"YVR"},"T9G":{"zone":"D09","province":"AB","entry":"YVR"},"T9H":{"zone":"D10","province":"AB","entry":"YVR"},"T9J":{"zone":"D10","province":"AB","entry":"YVR"},"T9K":{"zone":"D10","province":"AB","entry":"YVR"},"T9M":{"zone":"D10","province":"AB","entry":"YVR"},"T9N":{"zone":"D10","province":"AB","entry":"YVR"},"T9S":{"zone":"D10","province":"AB","entry":"YVR"},"T9V":{"zone":"D10","province":"AB","entry":"YVR"},"T9W":{"zone":"D10","province":"AB","entry":"YVR"},"T9X":{"zone":"D10","province":"AB","entry":"YVR"},"V0A":{"zone":"D06","province":"BC","entry":"YVR"},"V0B":{"zone":"D10","province":"BC","entry":"YVR"},"V0C":{"zone":"D08","province":"BC","entry":"YVR"},"V0E":{"zone":"D05","province":"BC","entry":"YVR"},"V0G":{"zone":"D06","province":"BC","entry":"YVR"},"V0H":{"zone":"D03","province":"BC","entry":"YVR"},"V0J":{"zone":"D08","province":"BC","entry":"YVR"},"V0K":{"zone":"D05","province":"BC","entry":"YVR"},"V0L":{"zone":"D07","province":"BC","entry":"YVR"},"V0M":{"zone":"D05","province":"BC","entry":"YVR"},"V0N":{"zone":"D05","province":"BC","entry":"YVR"},"V0P":{"zone":"D06","province":"BC","entry":"YVR"},"V0R":{"zone":"D06","province":"BC","entry":"YVR"},"V0S":{"zone":"D05","province":"BC","entry":"YVR"},"V0T":{"zone":"D09","province":"BC","entry":"YVR"},"V0V":{"zone":"D08","province":"BC","entry":"YVR"},"V0W":{"zone":"D09","province":"BC","entry":"YVR"},"V0X":{"zone":"D03","province":"BC","entry":"YVR"},"V1A":{"zone":"D09","province":"BC","entry":"YVR"},"V1B":{"zone":"D02","province":"BC","entry":"YVR"},"V1C":{"zone":"D09","province":"BC","entry":"YVR"},"V1E":{"zone":"D03","province":"BC","entry":"YVR"},"V1G":{"zone":"D10","province":"BC","entry":"YVR"},"V1H":{"zone":"D02","province":"BC","entry":"YVR"},"V1J":{"zone":"D10","province":"BC","entry":"YVR"},"V1K":{"zone":"D03","province":"BC","entry":"YVR"},"V1L":{"zone":"D03","province":"BC","entry":"YVR"},"V1M":{"zone":"D01","province":"BC","entry":"YVR"},"V1N":{"zone":"D03","province":"BC","entry":"YVR"},"V1P":{"zone":"D02","province":"BC","entry":"YVR"},"V1R":{"zone":"D03","province":"BC","entry":"YVR"},"V1S":{"zone":"D02","province":"BC","entry":"YVR"},"V1T":{"zone":"D02","province":"BC","entry":"YVR"},"V1V":{"zone":"D02","province":"BC","entry":"YVR"},"V1W":{"zone":"D02","province":"BC","entry":"YVR"},"V1X":{"zone":"D02","province":"BC","entry":"YVR"},"V1Y":{"zone":"D02","province":"BC","entry":"YVR"},"V1Z":{"zone":"D02","province":"BC","entry":"YVR"},"V2A":{"zone":"D02","province":"BC","entry":"YVR"},"V2B":{"zone":"D02","province":"BC","entry":"YVR"},"V2C":{"zone":"D02","province":"BC","entry":"YVR"},"V2E":{"zone":"D02","province":"BC","entry":"YVR"},"V2G":{"zone":"D03","province":"BC","entry":"YVR"},"V2H":{"zone":"D02","province":"BC","entry":"YVR"},"V2J":{"zone":"D03","province":"BC","entry":"YVR"},"V2K":{"zone":"D03","province":"BC","entry":"YVR"},"V2L":{"zone":"D03","province":"BC","entry":"YVR"},"V2M":{"zone":"D03","province":"BC","entry":"YVR"},"V2N":{"zone":"D03","province":"BC","entry":"YVR"},"V2P":{"zone":"D02","province":"BC","entry":"YVR"},"V2R":{"zone":"D02","province":"BC","entry":"YVR"},"V2S":{"zone":"D01","province":"BC","entry":"YVR"},"V2T":{"zone":"D01","province":"BC","entry":"YVR"},"V2V":{"zone":"D01","province":"BC","entry":"YVR"},"V2W":{"zone":"D01","province":"BC","entry":"YVR"},"V2X":{"zone":"D01","province":"BC","entry":"YVR"},"V2Y":{"zone":"D01","province":"BC","entry":"YVR"},"V2Z":{"zone":"D01","province":"BC","entry":"YVR"},"V3A":{"zone":"D01","province":"BC","entry":"YVR"},"V3B":{"zone":"D01","province":"BC","entry":"YVR"},"V3C":{"zone":"D01","province":"BC","entry":"YVR"},"V3E":{"zone":"D01","province":"BC","entry":"YVR"},"V3G":{"zone":"D01","province":"BC","entry":"YVR"},"V3H":{"zone":"D01","province":"BC","entry":"YVR"},"V3J":{"zone":"D01","province":"BC","entry":"YVR"},"V3K":{"zone":"D01","province":"BC","entry":"YVR"},"V3L":{"zone":"D01","province":"BC","entry":"YVR"},"V3M":{"zone":"D01","province":"BC","entry":"YVR"},"V3N":{"zone":"D01","province":"BC","entry":"YVR"},"V3R":{"zone":"D01","province":"BC","entry":"YVR"},"V3S":{"zone":"D01","province":"BC","entry":"YVR"},"V3T":{"zone":"D01","province":"BC","entry":"YVR"},"V3V":{"zone":"D01","province":"BC","entry":"YVR"},"V3W":{"zone":"D01","province":"BC","entry":"YVR"},"V3X":{"zone":"D01","province":"BC","entry":"YVR"},"V3Y":{"zone":"D01","province":"BC","entry":"YVR"},"V3Z":{"zone":"D01","province":"BC","entry":"YVR"},"V4A":{"zone":"D01","province":"BC","entry":"YVR"},"V4B":{"zone":"D01","province":"BC","entry":"YVR"},"V4C":{"zone":"D01","province":"BC","entry":"YVR"},"V4E":{"zone":"D01","province":"BC","entry":"YVR"},"V4G":{"zone":"D01","province":"BC","entry":"YVR"},"V4K":{"zone":"D01","province":"BC","entry":"YVR"},"V4L":{"zone":"D01","province":"BC","entry":"YVR"},"V4M":{"zone":"D01","province":"BC","entry":"YVR"},"V4N":{"zone":"D01","province":"BC","entry":"YVR"},"V4P":{"zone":"D01","province":"BC","entry":"YVR"},"V4R":{"zone":"D01","province":"BC","entry":"YVR"},"V4S":{"zone":"D01","province":"BC","entry":"YVR"},"V4T":{"zone":"D02","province":"BC","entry":"YVR"},"V4V":{"zone":"D02","province":"BC","entry":"YVR"},"V4W":{"zone":"D01","province":"BC","entry":"YVR"},"V4X":{"zone":"D01","province":"BC","entry":"YVR"},"V4Z":{"zone":"D05","province":"BC","entry":"YVR"},"V5A":{"zone":"D01","province":"BC","entry":"YVR"},"V5B":{"zone":"D01","province":"BC","entry":"YVR"},"V5C":{"zone":"D01","province":"BC","entry":"YVR"},"V5E":{"zone":"D01","province":"BC","entry":"YVR"},"V5G":{"zone":"D01","province":"BC","entry":"YVR"},"V5H":{"zone":"D01","province":"BC","entry":"YVR"},"V5J":{"zone":"D01","province":"BC","entry":"YVR"},"V5K":{"zone":"D01","province":"BC","entry":"YVR"},"V5L":{"zone":"D01","province":"BC","entry":"YVR"},"V5M":{"zone":"D01","province":"BC","entry":"YVR"},"V5N":{"zone":"D01","province":"BC","entry":"YVR"},"V5P":{"zone":"D01","province":"BC","entry":"YVR"},"V5R":{"zone":"D01","province":"BC","entry":"YVR"},"V5S":{"zone":"D01","province":"BC","entry":"YVR"},"V5T":{"zone":"D01","province":"BC","entry":"YVR"},"V5V":{"zone":"D01","province":"BC","entry":"YVR"},"V5W":{"zone":"D01","province":"BC","entry":"YVR"},"V5X":{"zone":"D01","province":"BC","entry":"YVR"},"V5Y":{"zone":"D01","province":"BC","entry":"YVR"},"V5Z":{"zone":"D01","province":"BC","entry":"YVR"},"V6A":{"zone":"D01","province":"BC","entry":"YVR"},"V6B":{"zone":"D01","province":"BC","entry":"YVR"},"V6C":{"zone":"D01","province":"BC","entry":"YVR"},"V6E":{"zone":"D01","province":"BC","entry":"YVR"},"V6G":{"zone":"D01","province":"BC","entry":"YVR"},"V6H":{"zone":"D01","province":"BC","entry":"YVR"},"V6J":{"zone":"D01","province":"BC","entry":"YVR"},"V6K":{"zone":"D01","province":"BC","entry":"YVR"},"V6L":{"zone":"D01","province":"BC","entry":"YVR"},"V6M":{"zone":"D01","province":"BC","entry":"YVR"},"V6N":{"zone":"D01","province":"BC","entry":"YVR"},"V6P":{"zone":"D01","province":"BC","entry":"YVR"},"V6R":{"zone":"D01","province":"BC","entry":"YVR"},"V6S":{"zone":"D01","province":"BC","entry":"YVR"},"V6T":{"zone":"D01","province":"BC","entry":"YVR"},"V6V":{"zone":"D01","province":"BC","entry":"YVR"},"V6W":{"zone":"D01","province":"BC","entry":"YVR"},"V6X":{"zone":"D01","province":"BC","entry":"YVR"},"V6Y":{"zone":"D01","province":"BC","entry":"YVR"},"V6Z":{"zone":"D01","province":"BC","entry":"YVR"},"V7A":{"zone":"D01","province":"BC","entry":"YVR"},"V7B":{"zone":"D01","province":"BC","entry":"YVR"},"V7C":{"zone":"D01","province":"BC","entry":"YVR"},"V7E":{"zone":"D01","province":"BC","entry":"YVR"},"V7G":{"zone":"D01","province":"BC","entry":"YVR"},"V7H":{"zone":"D01","province":"BC","entry":"YVR"},"V7J":{"zone":"D01","province":"BC","entry":"YVR"},"V7K":{"zone":"D01","province":"BC","entry":"YVR"},"V7L":{"zone":"D01","province":"BC","entry":"YVR"},"V7M":{"zone":"D01","province":"BC","entry":"YVR"},"V7N":{"zone":"D01","province":"BC","entry":"YVR"},"V7P":{"zone":"D01","province":"BC","entry":"YVR"},"V7R":{"zone":"D01","province":"BC","entry":"YVR"},"V7S":{"zone":"D01","province":"BC","entry":"YVR"},"V7T":{"zone":"D01","province":"BC","entry":"YVR"},"V7V":{"zone":"D01","province":"BC","entry":"YVR"},"V7W":{"zone":"D01","province":"BC","entry":"YVR"},"V7X":{"zone":"D01","province":"BC","entry":"YVR"},"V7Y":{"zone":"D01","province":"BC","entry":"YVR"},"V8A":{"zone":"D05","province":"BC","entry":"YVR"},"V8B":{"zone":"D05","province":"BC","entry":"YVR"},"V8C":{"zone":"D07","province":"BC","entry":"YVR"},"V8E":{"zone":"D05","province":"BC","entry":"YVR"},"V8G":{"zone":"D07","province":"BC","entry":"YVR"},"V8J":{"zone":"D09","province":"BC","entry":"YVR"},"V8K":{"zone":"D02","province":"BC","entry":"YVR"},"V8L":{"zone":"D02","province":"BC","entry":"YVR"},"V8M":{"zone":"D02","province":"BC","entry":"YVR"},"V8N":{"zone":"D02","province":"BC","entry":"YVR"},"V8P":{"zone":"D02","province":"BC","entry":"YVR"},"V8R":{"zone":"D02","province":"BC","entry":"YVR"},"V8S":{"zone":"D02","province":"BC","entry":"YVR"},"V8T":{"zone":"D02","province":"BC","entry":"YVR"},"V8V":{"zone":"D02","province":"BC","entry":"YVR"},"V8W":{"zone":"D02","province":"BC","entry":"YVR"},"V8X":{"zone":"D02","province":"BC","entry":"YVR"},"V8Y":{"zone":"D02","province":"BC","entry":"YVR"},"V8Z":{"zone":"D02","province":"BC","entry":"YVR"},"V9A":{"zone":"D02","province":"BC","entry":"YVR"},"V9B":{"zone":"D02","province":"BC","entry":"YVR"},"V9C":{"zone":"D02","province":"BC","entry":"YVR"},"V9E":{"zone":"D02","province":"BC","entry":"YVR"},"V9G":{"zone":"D02","province":"BC","entry":"YVR"},"V9H":{"zone":"D03","province":"BC","entry":"YVR"},"V9J":{"zone":"D03","province":"BC","entry":"YVR"},"V9K":{"zone":"D13","province":"BC","entry":"YYZ"},"V9L":{"zone":"D02","province":"BC","entry":"YVR"},"V9M":{"zone":"D14","province":"BC","entry":"YYZ"},"V9N":{"zone":"D14","province":"BC","entry":"YYZ"},"V9P":{"zone":"D13","province":"BC","entry":"YYZ"},"V9R":{"zone":"D13","province":"BC","entry":"YYZ"},"V9S":{"zone":"D13","province":"BC","entry":"YYZ"},"V9T":{"zone":"D13","province":"BC","entry":"YYZ"},"V9V":{"zone":"D13","province":"BC","entry":"YYZ"},"V9W":{"zone":"D14","province":"BC","entry":"YYZ"},"V9X":{"zone":"D13","province":"BC","entry":"YYZ"},"V9Y":{"zone":"D03","province":"BC","entry":"YVR"},"V9Z":{"zone":"D05","province":"BC","entry":"YVR"},"X0A":{"zone":"D15","province":"NU","entry":"YVR"},"X0B":{"zone":"D15","province":"NT","entry":"YVR"},"X0C":{"zone":"D15","province":"NT","entry":"YVR"},"X0E":{"zone":"D15","province":"NT","entry":"YVR"},"X0G":{"zone":"D15","province":"NT","entry":"YVR"},"X1A":{"zone":"D14","province":"NT","entry":"YVR"},"Y0A":{"zone":"D15","province":"YT","entry":"YVR"},"Y0B":{"zone":"D15","province":"YT","entry":"YVR"},"Y1A":{"zone":"D14","province":"YT","entry":"YVR"}};
+
+const PROVINCE_NAMES = {
+  AB: 'Alberta', BC: 'British Columbia', MB: 'Manitoba',
+  NB: 'New Brunswick', NL: 'Newfoundland & Labrador',
+  NS: 'Nova Scotia', NT: 'Northwest Territories',
+  NU: 'Nunavut', ON: 'Ontario',
+  PE: 'Prince Edward Island', QC: 'Quebec',
+  SK: 'Saskatchewan', YT: 'Yukon'
+};
+
+const HARDCODED_RATE_CARD = {
+  "0.00 - 0.05": {"D01":590,"D02":590,"D03":607,"D04":617,"D05":623,"D06":657,"D07":689,"D08":724,"D09":882,"D10":884,"D11":1027,"D12":1036,"D13":1079,"D14":1221,"D15":1293,"D16":1335},
+  "0.05 - 0.10": {"D01":615,"D02":615,"D03":631,"D04":643,"D05":647,"D06":681,"D07":715,"D08":748,"D09":944,"D10":947,"D11":1091,"D12":1100,"D13":1139,"D14":1286,"D15":1391,"D16":1436},
+  "0.10 - 0.15": {"D01":638,"D02":638,"D03":654,"D04":666,"D05":672,"D06":705,"D07":739,"D08":773,"D09":1044,"D10":1047,"D11":1194,"D12":1203,"D13":1234,"D14":1394,"D15":1562,"D16":1612},
+  "0.15 - 0.20": {"D01":701,"D02":706,"D03":711,"D04":717,"D05":723,"D06":756,"D07":790,"D08":824,"D09":1144,"D10":1147,"D11":1298,"D12":1307,"D13":1329,"D14":1502,"D15":1734,"D16":1789},
+  "0.20 - 0.25": {"D01":767,"D02":773,"D03":778,"D04":783,"D05":789,"D06":824,"D07":856,"D08":890,"D09":1245,"D10":1247,"D11":1401,"D12":1410,"D13":1425,"D14":1609,"D15":1905,"D16":1965},
+  "0.25 - 0.50": {"D01":948,"D02":952,"D03":959,"D04":964,"D05":970,"D06":1004,"D07":1037,"D08":1071,"D09":1509,"D10":1514,"D11":1715,"D12":1724,"D13":1673,"D14":1886,"D15":2237,"D16":2309},
+  "0.50 - 0.75": {"D01":1114,"D02":1121,"D03":1126,"D04":1130,"D05":1137,"D06":1171,"D07":1204,"D08":1238,"D09":1733,"D10":1742,"D11":1965,"D12":1975,"D13":1925,"D14":2156,"D15":2543,"D16":2619},
+  "0.75 - 1.00": {"D01":1267,"D02":1272,"D03":1278,"D04":1283,"D05":1290,"D06":1322,"D07":1356,"D08":1390,"D09":1922,"D10":1933,"D11":2173,"D12":2183,"D13":2133,"D14":2376,"D15":2788,"D16":2867},
+  "1.00 - 1.25": {"D01":1403,"D02":1409,"D03":1415,"D04":1421,"D05":1426,"D06":1460,"D07":1493,"D08":1526,"D09":2078,"D10":2090,"D11":2338,"D12":2347,"D13":2299,"D14":2548,"D15":2971,"D16":3051},
+  "1.25 - 1.50": {"D01":1556,"D02":1562,"D03":1567,"D04":1572,"D05":1579,"D06":1612,"D07":1645,"D08":1679,"D09":2267,"D10":2282,"D11":2546,"D12":2557,"D13":2507,"D14":2768,"D15":3217,"D16":3297},
+  "1.50 - 1.75": {"D01":1698,"D02":1704,"D03":1710,"D04":1715,"D05":1721,"D06":1754,"D07":1788,"D08":1821,"D09":2468,"D10":2486,"D11":2771,"D12":2780,"D13":2732,"D14":3008,"D15":3486,"D16":3569},
+  "1.75 - 2.00": {"D01":1836,"D02":1841,"D03":1846,"D04":1852,"D05":1858,"D06":1891,"D07":1925,"D08":1958,"D09":2642,"D10":2660,"D11":2960,"D12":2971,"D13":2921,"D14":3207,"D15":3705,"D16":3790},
+  "2.00 - 2.25": {"D01":1972,"D02":1978,"D03":1983,"D04":1988,"D05":1994,"D06":2029,"D07":2061,"D08":2095,"D09":2815,"D10":2837,"D11":3149,"D12":3160,"D13":3111,"D14":3407,"D15":3925,"D16":4010},
+  "2.25 - 2.50": {"D01":2109,"D02":2114,"D03":2120,"D04":2125,"D05":2130,"D06":2165,"D07":2199,"D08":2231,"D09":2991,"D10":3013,"D11":3339,"D12":3350,"D13":3302,"D14":3606,"D15":4145,"D16":4232},
+  "2.50 - 2.75": {"D01":2263,"D02":2268,"D03":2273,"D04":2279,"D05":2284,"D06":2318,"D07":2351,"D08":2385,"D09":3162,"D10":3176,"D11":3526,"D12":3536,"D13":3480,"D14":3802,"D15":4361,"D16":4449},
+  "2.75 - 3.00": {"D01":2454,"D02":2554,"D03":2559,"D04":2629,"D05":2662,"D06":2715,"D07":2867,"D08":2867,"D09":3394,"D10":3416,"D11":3763,"D12":3772,"D13":3744,"D14":4084,"D15":4677,"D16":4770},
+  "3.00 - 3.25": {"D01":2624,"D02":2786,"D03":2790,"D04":2903,"D05":2954,"D06":3020,"D07":3250,"D08":3227,"D09":3590,"D10":3616,"D11":3961,"D12":3971,"D13":3960,"D14":4315,"D15":4930,"D16":5024},
+  "3.25 - 3.50": {"D01":2793,"D02":3018,"D03":3021,"D04":3178,"D05":3245,"D06":3326,"D07":3634,"D08":3589,"D09":3786,"D10":3817,"D11":4160,"D12":4169,"D13":4176,"D14":4544,"D15":5182,"D16":5278},
+  "3.50 - 3.75": {"D01":2962,"D02":3250,"D03":3252,"D04":3452,"D05":3539,"D06":3632,"D07":4019,"D08":3950,"D09":3983,"D10":4018,"D11":4358,"D12":4367,"D13":4392,"D14":4773,"D15":5434,"D16":5532},
+  "3.75 - 4.00": {"D01":3131,"D02":3481,"D03":3483,"D04":3727,"D05":3830,"D06":3938,"D07":4402,"D08":4313,"D09":4178,"D10":4218,"D11":4555,"D12":4566,"D13":4607,"D14":5003,"D15":5685,"D16":5786},
+  "4.00 - 4.25": {"D01":3324,"D02":3768,"D03":3769,"D04":4077,"D05":4208,"D06":4335,"D07":4917,"D08":4794,"D09":4412,"D10":4457,"D11":4792,"D12":4802,"D13":4872,"D14":5287,"D15":6003,"D16":6107},
+  "4.25 - 4.50": {"D01":3493,"D02":3999,"D03":4001,"D04":4352,"D05":4500,"D06":4640,"D07":5301,"D08":5155,"D09":4607,"D10":4658,"D11":4991,"D12":5000,"D13":5087,"D14":5515,"D15":6254,"D16":6360},
+  "4.50 - 4.75": {"D01":3661,"D02":4231,"D03":4231,"D04":4626,"D05":4792,"D06":4946,"D07":5684,"D08":5517,"D09":4803,"D10":4858,"D11":5189,"D12":5198,"D13":5303,"D14":5746,"D15":6506,"D16":6615},
+  "4.75 - 5.00": {"D01":632,"D02":633,"D03":634,"D04":635,"D05":636,"D06":642,"D07":648,"D08":653,"D09":729,"D10":730,"D11":764,"D12":767,"D13":757,"D14":795,"D15":856,"D16":868},
+  "5 - 6": {"D01":619,"D02":619,"D03":619,"D04":621,"D05":622,"D06":626,"D07":631,"D08":636,"D09":707,"D10":709,"D11":741,"D12":743,"D13":736,"D14":768,"D15":824,"D16":835},
+  "6 - 7": {"D01":606,"D02":608,"D03":608,"D04":608,"D05":609,"D06":614,"D07":618,"D08":622,"D09":687,"D10":689,"D11":719,"D12":720,"D13":714,"D14":744,"D15":795,"D16":804},
+  "7 - 8": {"D01":596,"D02":596,"D03":597,"D04":598,"D05":598,"D06":602,"D07":605,"D08":609,"D09":669,"D10":670,"D11":697,"D12":699,"D13":693,"D14":720,"D15":766,"D16":775},
+  "8 - 9": {"D01":589,"D02":590,"D03":590,"D04":591,"D05":591,"D06":595,"D07":598,"D08":601,"D09":658,"D10":659,"D11":685,"D12":686,"D13":682,"D14":706,"D15":750,"D16":757},
+  "9 - 10": {"D01":583,"D02":584,"D03":584,"D04":585,"D05":585,"D06":588,"D07":591,"D08":594,"D09":650,"D10":651,"D11":676,"D12":677,"D13":672,"D14":697,"D15":738,"D16":746},
+  "10 - 11": {"D01":578,"D02":578,"D03":579,"D04":579,"D05":579,"D06":582,"D07":585,"D08":587,"D09":641,"D10":643,"D11":666,"D12":667,"D13":663,"D14":686,"D15":725,"D16":732},
+  "11 - 12": {"D01":573,"D02":574,"D03":574,"D04":574,"D05":575,"D06":577,"D07":580,"D08":582,"D09":634,"D10":636,"D11":658,"D12":659,"D13":655,"D14":676,"D15":714,"D16":720},
+  "12 - 13": {"D01":569,"D02":570,"D03":570,"D04":571,"D05":571,"D06":573,"D07":575,"D08":578,"D09":628,"D10":629,"D11":651,"D12":652,"D13":649,"D14":669,"D15":705,"D16":711},
+  "13 - 14": {"D01":567,"D02":567,"D03":568,"D04":568,"D05":569,"D06":571,"D07":573,"D08":575,"D09":622,"D10":624,"D11":645,"D12":646,"D13":643,"D14":662,"D15":697,"D16":703},
+  "14 - 15": {"D01":567,"D02":573,"D03":573,"D04":577,"D05":579,"D06":582,"D07":591,"D08":591,"D09":622,"D10":622,"D11":643,"D12":644,"D13":642,"D14":661,"D15":696,"D16":700},
+  "15 - 16": {"D01":566,"D02":575,"D03":575,"D04":581,"D05":584,"D06":588,"D07":601,"D08":599,"D09":619,"D10":619,"D11":639,"D12":639,"D13":639,"D14":658,"D15":692,"D16":697},
+  "16 - 17": {"D01":566,"D02":577,"D03":577,"D04":585,"D05":588,"D06":592,"D07":608,"D08":606,"D09":615,"D10":618,"D11":635,"D12":636,"D13":636,"D14":655,"D15":687,"D16":692},
+  "17 - 18": {"D01":565,"D02":578,"D03":579,"D04":588,"D05":592,"D06":597,"D07":615,"D08":612,"D09":614,"D10":615,"D11":632,"D12":632,"D13":634,"D14":652,"D15":683,"D16":689},
+  "18 - 19": {"D01":564,"D02":580,"D03":580,"D04":591,"D05":595,"D06":601,"D07":622,"D08":618,"D09":612,"D10":614,"D11":629,"D12":629,"D13":631,"D14":649,"D15":680,"D16":685},
+  "19 - 20": {"D01":564,"D02":583,"D03":583,"D04":597,"D05":602,"D06":608,"D07":633,"D08":628,"D09":612,"D10":614,"D11":628,"D12":629,"D13":632,"D14":649,"D15":680,"D16":685},
+  "20 - 21": {"D01":564,"D02":584,"D03":584,"D04":599,"D05":605,"D06":611,"D07":638,"D08":632,"D09":609,"D10":612,"D11":626,"D12":626,"D13":629,"D14":647,"D15":677,"D16":682},
+  "21 - 22": {"D01":563,"D02":585,"D03":585,"D04":601,"D05":608,"D06":614,"D07":643,"D08":636,"D09":608,"D10":611,"D11":622,"D12":624,"D13":628,"D14":645,"D15":675,"D16":679},
+  "22 - 23": {"D01":562,"D02":586,"D03":589,"D04":601,"D05":608,"D06":614,"D07":643,"D08":636,"D09":605,"D10":608,"D11":621,"D12":621,"D13":625,"D14":642,"D15":672,"D16":675},
+  "23 - 24": {"D01":561,"D02":585,"D03":588,"D04":599,"D05":605,"D06":612,"D07":640,"D08":634,"D09":605,"D10":606,"D11":619,"D12":619,"D13":622,"D14":639,"D15":667,"D16":672},
+  "24 - 25": {"D01":560,"D02":585,"D03":589,"D04":599,"D05":605,"D06":612,"D07":640,"D08":633,"D09":604,"D10":606,"D11":616,"D12":616,"D13":622,"D14":638,"D15":666,"D16":670},
+  "25 - 26": {"D01":558,"D02":584,"D03":588,"D04":597,"D05":604,"D06":609,"D07":638,"D08":631,"D09":602,"D10":605,"D11":615,"D12":615,"D13":619,"D14":636,"D15":663,"D16":667},
+  "26 - 27": {"D01":558,"D02":583,"D03":587,"D04":596,"D05":602,"D06":608,"D07":636,"D08":629,"D09":601,"D10":604,"D11":612,"D12":612,"D13":619,"D14":634,"D15":661,"D16":665},
+  "27 - 28": {"D01":557,"D02":582,"D03":586,"D04":595,"D05":601,"D06":608,"D07":634,"D08":628,"D09":599,"D10":601,"D11":611,"D12":611,"D13":616,"D14":632,"D15":658,"D16":662},
+  "28 - 29": {"D01":555,"D02":582,"D03":585,"D04":594,"D05":601,"D06":605,"D07":632,"D08":626,"D09":598,"D10":601,"D11":608,"D12":608,"D13":615,"D14":629,"D15":656,"D16":659},
+  "29 - 30": {"D01":555,"D02":582,"D03":586,"D04":594,"D05":601,"D06":605,"D07":632,"D08":626,"D09":598,"D10":601,"D11":608,"D12":608,"D13":615,"D14":629,"D15":655,"D16":659},
+  "30 - 31": {"D01":555,"D02":581,"D03":585,"D04":594,"D05":599,"D06":605,"D07":629,"D08":625,"D09":597,"D10":599,"D11":606,"D12":606,"D13":614,"D14":628,"D15":653,"D16":656},
+  "31 - 32": {"D01":554,"D02":580,"D03":584,"D04":592,"D05":598,"D06":604,"D07":629,"D08":622,"D09":596,"D10":598,"D11":605,"D12":605,"D13":612,"D14":626,"D15":651,"D16":654},
+  "32 - 33": {"D01":553,"D02":580,"D03":584,"D04":591,"D05":597,"D06":602,"D07":628,"D08":622,"D09":595,"D10":597,"D11":604,"D12":604,"D13":612,"D14":625,"D15":649,"D16":653},
+  "33 - 34": {"D01":551,"D02":579,"D03":583,"D04":591,"D05":596,"D06":601,"D07":626,"D08":621,"D09":594,"D10":596,"D11":602,"D12":602,"D13":609,"D14":624,"D15":648,"D16":651},
+  "34 - 35": {"D01":551,"D02":579,"D03":583,"D04":591,"D05":596,"D06":601,"D07":626,"D08":621,"D09":594,"D10":596,"D11":601,"D12":601,"D13":609,"D14":624,"D15":647,"D16":650},
+  "35 - 36": {"D01":551,"D02":579,"D03":583,"D04":590,"D05":595,"D06":601,"D07":625,"D08":619,"D09":594,"D10":595,"D11":601,"D12":601,"D13":608,"D14":622,"D15":646,"D16":649},
+  "36 - 37": {"D01":551,"D02":578,"D03":582,"D04":589,"D05":595,"D06":601,"D07":624,"D08":619,"D09":592,"D10":595,"D11":599,"D12":599,"D13":608,"D14":621,"D15":644,"D16":647},
+  "37 - 38": {"D01":550,"D02":577,"D03":582,"D04":589,"D05":594,"D06":599,"D07":622,"D08":618,"D09":592,"D10":594,"D11":598,"D12":598,"D13":606,"D14":619,"D15":643,"D16":646},
+  "38 - 39": {"D01":550,"D02":577,"D03":582,"D04":588,"D05":594,"D06":598,"D07":622,"D08":616,"D09":591,"D10":594,"D11":597,"D12":597,"D13":606,"D14":619,"D15":642,"D16":645},
+  "39 - 40": {"D01":550,"D02":577,"D03":582,"D04":588,"D05":594,"D06":598,"D07":622,"D08":616,"D09":591,"D10":594,"D11":597,"D12":597,"D13":606,"D14":619,"D15":641,"D16":644},
+  "40 - 41": {"D01":548,"D02":577,"D03":581,"D04":587,"D05":594,"D06":598,"D07":621,"D08":615,"D09":590,"D10":594,"D11":596,"D12":596,"D13":605,"D14":618,"D15":640,"D16":643},
+  "41 - 42": {"D01":548,"D02":576,"D03":581,"D04":587,"D05":592,"D06":597,"D07":619,"D08":615,"D09":590,"D10":592,"D11":595,"D12":595,"D13":605,"D14":616,"D15":639,"D16":642},
+  "42 - 43": {"D01":548,"D02":576,"D03":581,"D04":586,"D05":592,"D06":596,"D07":619,"D08":615,"D09":589,"D10":591,"D11":594,"D12":594,"D13":604,"D14":616,"D15":638,"D16":641},
+  "43 - 44": {"D01":548,"D02":576,"D03":581,"D04":586,"D05":592,"D06":596,"D07":619,"D08":615,"D09":589,"D10":591,"D11":594,"D12":594,"D13":604,"D14":616,"D15":638,"D16":641},
+  "44 - 45": {"D01":548,"D02":576,"D03":581,"D04":586,"D05":591,"D06":596,"D07":619,"D08":614,"D09":589,"D10":591,"D11":594,"D12":594,"D13":604,"D14":615,"D15":636,"D16":640},
+  "45 - 46": {"D01":547,"D02":575,"D03":580,"D04":586,"D05":591,"D06":595,"D07":618,"D08":614,"D09":588,"D10":590,"D11":592,"D12":592,"D13":602,"D14":615,"D15":636,"D16":639},
+  "46 - 47": {"D01":547,"D02":575,"D03":580,"D04":585,"D05":590,"D06":595,"D07":618,"D08":612,"D09":588,"D10":590,"D11":591,"D12":591,"D13":601,"D14":614,"D15":635,"D16":638},
+  "47 - 48": {"D01":545,"D02":575,"D03":580,"D04":585,"D05":590,"D06":594,"D07":616,"D08":612,"D09":587,"D10":590,"D11":591,"D12":591,"D13":601,"D14":614,"D15":634,"D16":636},
+  "48 - 49": {"D01":545,"D02":575,"D03":580,"D04":585,"D05":590,"D06":595,"D07":616,"D08":612,"D09":588,"D10":590,"D11":591,"D12":591,"D13":601,"D14":614,"D15":634,"D16":636},
+  "49 - 50": {"D01":545,"D02":575,"D03":580,"D04":585,"D05":590,"D06":594,"D07":615,"D08":612,"D09":587,"D10":589,"D11":590,"D12":590,"D13":601,"D14":612,"D15":633,"D16":636},
+  "50 - 51": {"D01":545,"D02":574,"D03":579,"D04":584,"D05":589,"D06":594,"D07":615,"D08":611,"D09":587,"D10":589,"D11":589,"D12":589,"D13":601,"D14":612,"D15":633,"D16":635},
+  "51 - 52": {"D01":544,"D02":574,"D03":579,"D04":584,"D05":589,"D06":594,"D07":615,"D08":611,"D09":586,"D10":588,"D11":589,"D12":589,"D13":599,"D14":612,"D15":632,"D16":634},
+  "52 - 53": {"D01":544,"D02":574,"D03":579,"D04":583,"D05":588,"D06":594,"D07":615,"D08":609,"D09":586,"D10":588,"D11":588,"D12":588,"D13":599,"D14":611,"D15":631,"D16":634},
+  "53 - 54": {"D01":544,"D02":574,"D03":579,"D04":584,"D05":589,"D06":594,"D07":615,"D08":609,"D09":586,"D10":588,"D11":588,"D12":588,"D13":599,"D14":611,"D15":631,"D16":634},
+  "54 - 55": {"D01":544,"D02":574,"D03":579,"D04":583,"D05":588,"D06":594,"D07":614,"D08":609,"D09":586,"D10":588,"D11":588,"D12":588,"D13":599,"D14":611,"D15":629,"D16":633},
+  "55 - 56": {"D01":544,"D02":573,"D03":579,"D04":583,"D05":588,"D06":592,"D07":614,"D08":608,"D09":585,"D10":587,"D11":587,"D12":587,"D13":598,"D14":609,"D15":629,"D16":632},
+  "56 - 57": {"D01":544,"D02":573,"D03":578,"D04":583,"D05":587,"D06":592,"D07":612,"D08":608,"D09":585,"D10":587,"D11":587,"D12":587,"D13":598,"D14":609,"D15":629,"D16":632},
+  "57 - 58": {"D01":544,"D02":573,"D03":578,"D04":582,"D05":587,"D06":591,"D07":612,"D08":608,"D09":585,"D10":587,"D11":586,"D12":586,"D13":597,"D14":608,"D15":628,"D16":631},
+  "58 - 59": {"D01":544,"D02":573,"D03":578,"D04":582,"D05":587,"D06":592,"D07":612,"D08":608,"D09":585,"D10":587,"D11":586,"D12":586,"D13":597,"D14":608,"D15":629,"D16":631},
+  "59 - 60": {"D01":544,"D02":573,"D03":578,"D04":582,"D05":587,"D06":591,"D07":612,"D08":608,"D09":584,"D10":586,"D11":586,"D12":586,"D13":597,"D14":608,"D15":628,"D16":629}
+}
+
+let RATE_CARD = HARDCODED_RATE_CARD;
+
+(function loadCustomRates() {
+  try {
+    const saved = localStorage.getItem('xindus_custom_rates');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        RATE_CARD = parsed;
+        document.getElementById('custom-rates-badge').style.display = 'inline-flex';
+      }
+    }
+  } catch(e) {}
+})();
+
+const SLAB_META = [
+  { label:"0.00 - 0.05", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"0.05 - 0.10", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"0.10 - 0.15", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"0.15 - 0.20", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"0.20 - 0.25", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"0.25 - 0.50", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"0.50 - 0.75", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"0.75 - 1.00", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"1.00 - 1.25", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"1.25 - 1.50", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"1.50 - 1.75", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"1.75 - 2.00", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"2.00 - 2.25", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"2.25 - 2.50", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"2.50 - 2.75", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"2.75 - 3.00", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"3.00 - 3.25", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"3.25 - 3.50", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"3.50 - 3.75", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"3.75 - 4.00", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"4.00 - 4.25", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"4.25 - 4.50", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"4.50 - 4.75", group:"Light (0 - 5 kg)", isPerKg:false },
+  { label:"4.75 - 5.00", group:"Light (0 - 5 kg)", isPerKg:true },
+  { label:"5 - 6",   group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"6 - 7",   group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"7 - 8",   group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"8 - 9",   group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"9 - 10",  group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"10 - 11", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"11 - 12", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"12 - 13", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"13 - 14", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"14 - 15", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"15 - 16", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"16 - 17", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"17 - 18", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"18 - 19", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"19 - 20", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"20 - 21", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"21 - 22", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"22 - 23", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"23 - 24", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"24 - 25", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"25 - 26", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"26 - 27", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"27 - 28", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"28 - 29", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"29 - 30", group:"Medium (5 - 30 kg)", isPerKg:true },
+  { label:"30 - 31", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"31 - 32", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"32 - 33", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"33 - 34", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"34 - 35", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"35 - 36", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"36 - 37", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"37 - 38", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"38 - 39", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"39 - 40", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"40 - 41", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"41 - 42", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"42 - 43", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"43 - 44", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"44 - 45", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"45 - 46", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"46 - 47", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"47 - 48", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"48 - 49", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"49 - 50", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"50 - 51", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"51 - 52", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"52 - 53", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"53 - 54", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"54 - 55", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"55 - 56", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"56 - 57", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"57 - 58", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"58 - 59", group:"Heavy (30 - 60 kg)", isPerKg:true },
+  { label:"59 - 60", group:"Heavy (30 - 60 kg)", isPerKg:true }
+];
+
+const FSA_LIST = Object.entries(ZONE_MAP).map(([fsa, d]) => ({ fsa, province: d.province, zone: d.zone, entry: d.entry }));
+
+(function buildSlabDropdown() {
+  const sel = document.getElementById('slab-select');
+  const groups = {};
+  SLAB_META.forEach(m => { if (!groups[m.group]) groups[m.group] = []; groups[m.group].push(m); });
+  Object.entries(groups).forEach(([groupName, slabs]) => {
+    const og = document.createElement('optgroup');
+    og.label = groupName;
+    slabs.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.label;
+      opt.textContent = m.label + ' kg';
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+})();
+
+function autoSelectSlab(val) {
+  const wt = parseFloat(val);
+  const tag = document.getElementById('actual-weight-tag');
+  tag.style.background = '#D1FAE5'; tag.style.color = '#059669';
+  if (isNaN(wt) || wt <= 0) { tag.style.display = 'none'; return; }
+  for (const m of SLAB_META) {
+    const parts = m.label.split(' - ');
+    if (parts.length !== 2) continue;
+    const lo = parseFloat(parts[0]), hi = parseFloat(parts[1]);
+    if (wt > lo && wt <= hi) {
+      document.getElementById('slab-select').value = m.label;
+      document.getElementById('slab-select').classList.remove('error');
+      clearFieldError('slab-err');
+      tag.textContent = 'Slab: ' + m.label + ' kg';
+      tag.style.display = 'inline-flex';
+      return;
+    }
+  }
+  tag.textContent = 'No slab for ' + wt + ' kg';
+  tag.style.display = 'inline-flex';
+  tag.style.background = '#FEE2E2'; tag.style.color = '#991B1B';
+}
+
+let selectedFSA = null, acIdx = -1;
+const fsaInput = document.getElementById('fsa');
+const acList   = document.getElementById('ac-list');
+
+fsaInput.addEventListener('input', function () {
+  selectedFSA = null;
+  const q = this.value.trim().toUpperCase();
+  if (!q) { closeAC(); return; }
+  const matches = FSA_LIST.filter(x => x.fsa.startsWith(q)).slice(0, 14);
+  renderAC(matches);
+  if (q.length === 3 && ZONE_MAP[q]) selectedFSA = q;
+});
+
+fsaInput.addEventListener('keydown', function (e) {
+  const items = acList.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx+1, items.length-1); highlightAC(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx-1, 0); highlightAC(items); }
+  else if (e.key === 'Enter') {
+    if (acIdx >= 0 && items[acIdx]) items[acIdx].click();
+    else if (items.length === 1) items[0].click();
+    else if (this.value.length === 3 && ZONE_MAP[this.value.toUpperCase()]) { selectedFSA = this.value.toUpperCase(); closeAC(); }
+  } else if (e.key === 'Escape') closeAC();
+});
+
+function renderAC(matches) {
+  acIdx = -1;
+  if (!matches.length) {
+    acList.innerHTML = '<div class="ac-empty">No FSA found. Try a different code.</div>';
+  } else {
+    acList.innerHTML = matches.map(m =>
+      '<div class="ac-item" data-fsa="' + m.fsa + '" role="option">' +
+      '<div style="display:flex;align-items:center"><span class="ac-code">' + m.fsa + '</span>' +
+      '<span class="ac-prov">' + (PROVINCE_NAMES[m.province] || m.province) + '</span></div>' +
+      '<span class="ac-zone-tag">' + m.zone + '</span></div>'
+    ).join('');
+    acList.querySelectorAll('.ac-item').forEach(el => {
+      el.addEventListener('mousedown', e => { e.preventDefault(); pickFSA(el.dataset.fsa); });
+      el.addEventListener('touchend',  e => { e.preventDefault(); pickFSA(el.dataset.fsa); });
+    });
+  }
+  acList.classList.add('open');
+}
+
+function pickFSA(fsa) {
+  selectedFSA = fsa; fsaInput.value = fsa; closeAC();
+  clearFieldError('fsa-err'); fsaInput.classList.remove('error');
+  document.getElementById('slab-select').focus();
+}
+
+function highlightAC(items) {
+  items.forEach((el, i) => el.classList.toggle('active', i === acIdx));
+  if (items[acIdx]) items[acIdx].scrollIntoView({ block: 'nearest' });
+}
+
+function closeAC() { acList.classList.remove('open'); acIdx = -1; }
+fsaInput.addEventListener('blur', () => setTimeout(closeAC, 200));
+document.addEventListener('mousedown', e => { if (!e.target.closest('.ac-wrap')) closeAC(); });
+
+let _currentCalc = null;
+let _currentSurcharge = 75; // controlled by admin
+
+function getSlabMidpoint(label) {
+  const parts = label.split(' - ');
+  if (parts.length !== 2) return 1;
+  return (parseFloat(parts[0]) + parseFloat(parts[1])) / 2;
+}
+
+function calculate() {
+  const fsaVal  = (selectedFSA || fsaInput.value.trim().toUpperCase());
+  const slabVal = document.getElementById('slab-select').value;
+  let valid = true;
+
+  if (!fsaVal || fsaVal.length !== 3 || !ZONE_MAP[fsaVal]) {
+    showFieldError('fsa-err'); fsaInput.classList.add('error'); valid = false;
+  } else { clearFieldError('fsa-err'); fsaInput.classList.remove('error'); }
+
+  if (!slabVal) {
+    showFieldError('slab-err'); document.getElementById('slab-select').classList.add('error'); valid = false;
+  } else { clearFieldError('slab-err'); document.getElementById('slab-select').classList.remove('error'); }
+
+  if (!valid) { hideResult(); return; }
+  setLoading(true);
+
+  setTimeout(() => {
+    const zoneData = ZONE_MAP[fsaVal];
+    const rates    = RATE_CARD[slabVal];
+    if (!rates) { showToast('Rate data not found for this slab.'); setLoading(false); return; }
+    const baseRate = rates[zoneData.zone];
+    if (baseRate === undefined) { showToast('No rate found for zone ' + zoneData.zone); setLoading(false); return; }
+
+    const slabMeta = SLAB_META.find(m => m.label === slabVal);
+    const isPerKg  = slabMeta ? slabMeta.isPerKg : false;
+    const prov     = PROVINCE_NAMES[zoneData.province] || zoneData.province;
+
+    document.getElementById('r-zone').textContent  = zoneData.zone;
+    document.getElementById('r-prov').textContent  = zoneData.province + ' — ' + prov;
+    const airportNames = { YYZ: 'YYZ · Toronto Pearson', YVR: 'YVR · Vancouver', YUL: 'YUL · Montreal', YYC: 'YYC · Calgary', YEG: 'YEG · Edmonton', YHZ: 'YHZ · Halifax' };
+    document.getElementById('r-entry').innerHTML = '<span class="entry-pill">✈ ' + (airportNames[zoneData.entry] || zoneData.entry) + '</span>';
+    document.getElementById('r-slab').textContent  = slabVal + ' kg';
+
+    _currentCalc = { baseRatePerKg: baseRate, isPerKg, slabLabel: slabVal, slabMidpoint: getSlabMidpoint(slabVal) };
+
+    document.getElementById('csb-toggle-row').style.display = 'flex';
+    document.getElementById('vol-checker').style.display     = isPerKg ? 'block' : 'none';
+    document.getElementById('row-rate-per-kg').style.display = isPerKg ? 'flex' : 'none';
+
+    document.getElementById('csb-toggle').checked = false;
+    ['vol-l','vol-b','vol-h'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('vol-result-grid').style.display = 'none';
+    document.getElementById('vol-warning').classList.remove('show');
+    document.getElementById('vol-recalc').classList.remove('show');
+    document.getElementById('vol-body').classList.remove('open');
+    document.getElementById('vol-chevron').classList.remove('open');
+
+    recalcBreakdown();
+    setLoading(false);
+    showResult();
+  }, 400);
+}
+
+function recalcBreakdown() {
+  if (!_currentCalc) return;
+  const { baseRatePerKg, isPerKg, slabMidpoint } = _currentCalc;
+  const surchargeRate = _currentSurcharge || 75;
+  const csbOn = document.getElementById('csb-toggle').checked;
+
+  // Exact weight entered by customer (actual-weight field), fallback to slab midpoint
+  const enteredWt = parseFloat(document.getElementById('actual-weight').value);
+  const weightForSurcharge = (!isNaN(enteredWt) && enteredWt > 0) ? enteredWt : slabMidpoint;
+
+  let baseFreight, warSurcharge;
+  if (isPerKg) {
+    // Freight = rate/kg × slab midpoint (slab-based, not entered weight)
+    baseFreight  = baseRatePerKg * slabMidpoint;
+    // Surcharge = surcharge/kg × exact weight entered
+    warSurcharge = surchargeRate * weightForSurcharge;
+    document.getElementById('r-rate-per-kg').textContent = '₹' + formatNum(baseRatePerKg) + '/kg';
+    document.getElementById('base-label').innerHTML = '<span class="dot"></span>Freight (' + formatNum(baseRatePerKg) + ' × ' + slabMidpoint.toFixed(2) + ' kg slab)';
+  } else {
+    baseFreight  = baseRatePerKg;
+    warSurcharge = surchargeRate * weightForSurcharge;
+    document.getElementById('base-label').innerHTML = '<span class="dot"></span>Base Freight Rate';
+  }
+
+  const csbExtra = csbOn ? 50 : 0;
+  const subtotal = baseFreight + warSurcharge + csbExtra;
+  const gst      = subtotal * 0.18;
+  const total    = subtotal + gst;
+
+  // Show final total always; breakdown hidden by default
+  document.getElementById('r-base').textContent    = '₹' + formatNum(baseFreight);
+  document.getElementById('r-war').textContent     = '₹' + formatNum(warSurcharge);
+  document.getElementById('row-csb').style.display = csbExtra ? 'flex' : 'none';
+  document.getElementById('r-csb').textContent     = '₹50.00';
+  const showSub = warSurcharge > 0 || csbExtra > 0;
+  document.getElementById('row-subtotal').style.display = showSub ? 'flex' : 'none';
+  document.getElementById('r-subtotal').textContent = '₹' + formatNum(subtotal);
+  document.getElementById('r-gst').textContent      = '₹' + formatNum(gst);
+  document.getElementById('r-total').textContent    = formatNum(total);
+
+  document.getElementById('gst-note').textContent = '* GST @ 18% applicable on freight + surcharges' + (csbOn ? ' · CSB-5 clearance ₹50 included' : '');
+
+  calcVolumetric();
+}
+
+function toggleBreakdown() {
+  const rows = document.getElementById('breakdown-rows');
+  const label = document.getElementById('breakdown-toggle-label');
+  const chevron = document.getElementById('breakdown-chevron');
+  const isOpen = rows.style.display !== 'none';
+  rows.style.display = isOpen ? 'none' : 'block';
+  label.textContent = isOpen ? 'See Breakdown' : 'Hide Breakdown';
+  chevron.innerHTML = isOpen ? '&#9660;' : '&#9650;';
+}
+
+function toggleVolChecker() {
+  const body    = document.getElementById('vol-body');
+  const chevron = document.getElementById('vol-chevron');
+  const isOpen  = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.classList.toggle('open', !isOpen);
+}
+
+function calcVolumetric() {
+  if (!_currentCalc || !_currentCalc.isPerKg) return;
+  const L = parseFloat(document.getElementById('vol-l').value);
+  const B = parseFloat(document.getElementById('vol-b').value);
+  const H = parseFloat(document.getElementById('vol-h').value);
+  if (isNaN(L)||isNaN(B)||isNaN(H)||L<=0||B<=0||H<=0) {
+    document.getElementById('vol-result-grid').style.display = 'none';
+    document.getElementById('vol-warning').classList.remove('show');
+    document.getElementById('vol-recalc').classList.remove('show');
+    return;
+  }
+  const grossWtRaw = parseFloat(document.getElementById('gross-weight').value);
+  const grossWt    = (!isNaN(grossWtRaw) && grossWtRaw > 0) ? grossWtRaw : _currentCalc.slabMidpoint;
+  const volWt      = (L * B * H) / 5000;
+  const chargeWt   = Math.max(grossWt, volWt);
+
+  document.getElementById('vol-gross-disp').textContent  = grossWt.toFixed(2) + ' kg';
+  document.getElementById('vol-vol-disp').textContent    = volWt.toFixed(2) + ' kg';
+  document.getElementById('vol-charge-disp').textContent = chargeWt.toFixed(2) + ' kg';
+  document.getElementById('vol-result-grid').style.display = 'grid';
+
+  if (volWt > grossWt) {
+    document.getElementById('vol-charge-bold').textContent = chargeWt.toFixed(2);
+    document.getElementById('vol-warning').classList.add('show');
+    const surcharge = parseFloat(document.getElementById('war-surcharge').value) || 0;
+    const csbOn     = document.getElementById('csb-toggle').checked;
+    const newBase   = _currentCalc.baseRatePerKg * chargeWt;
+    const newWar    = surcharge * chargeWt;
+    const newSub    = newBase + newWar + (csbOn ? 50 : 0);
+    const newTotal  = newSub * 1.18;
+    document.getElementById('vol-recalc-val').textContent   = '₹' + formatNum(newBase) + ' + war ₹' + formatNum(newWar);
+    document.getElementById('vol-recalc-total').textContent = '₹' + formatNum(newTotal);
+    document.getElementById('vol-recalc').classList.add('show');
+  } else {
+    document.getElementById('vol-warning').classList.remove('show');
+    document.getElementById('vol-recalc').classList.remove('show');
+  }
+}
+
+function formatNum(n) { return n.toFixed(2).replace(/B(?=(d{3})+(?!d))/g, ','); }
+
+function showResult() {
+  const r = document.getElementById('result');
+  r.style.display = 'none'; r.classList.remove('show');
+  // Show surcharge display
+  const surDisp = document.getElementById('surcharge-display-row');
+  if (surDisp) {
+    surDisp.style.display = 'flex';
+    const sv = document.getElementById('surcharge-display-val');
+    if (sv) sv.textContent = '₹' + _currentSurcharge + '/kg';
+  }
+  requestAnimationFrame(() => {
+    r.style.display = 'block';
+    requestAnimationFrame(() => r.classList.add('show'));
+    r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+function hideResult() {
+  const r = document.getElementById('result');
+  r.classList.remove('show');
+  setTimeout(() => { if (!r.classList.contains('show')) r.style.display = 'none'; }, 350);
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('calc-btn');
+  const txt = document.getElementById('btn-text');
+  btn.disabled = on;
+  txt.innerHTML = on
+    ? '<div class="spinner"></div><span>Calculating…</span>'
+    : '<span>🇨🇦</span><span>Get Shipping Rate</span>';
+}
+
+function showFieldError(id)  { document.getElementById(id).classList.add('show'); }
+function clearFieldError(id) { document.getElementById(id).classList.remove('show'); }
+
+function resetForm() {
+  fsaInput.value = ''; selectedFSA = null;
+  document.getElementById('slab-select').value = '';
+  document.getElementById('actual-weight').value = '';
+  document.getElementById('actual-weight-tag').style.display = 'none';
+  // gross-weight removed
+  document.getElementById('war-surcharge').value = '75';
+  document.getElementById('csb-toggle').checked = false;
+  ['vol-l','vol-b','vol-h'].forEach(id => document.getElementById(id).value = '');
+  clearFieldError('fsa-err'); clearFieldError('slab-err');
+  fsaInput.classList.remove('error');
+  document.getElementById('slab-select').classList.remove('error');
+  _currentCalc = null;
+  hideResult(); closeAC();
+}
+
+function copyResult() {
+  const zone  = document.getElementById('r-zone').textContent;
+  const prov  = document.getElementById('r-prov').textContent;
+  const slab  = document.getElementById('r-slab').textContent;
+  const base  = document.getElementById('r-base').textContent;
+  const war   = document.getElementById('r-war').textContent;
+  const gst   = document.getElementById('r-gst').textContent;
+  const total = document.getElementById('r-total').textContent;
+  const text = `Xindus Canada Shipping Rate
+Zone: ${zone} | Province: ${prov}
+Weight Slab: ${slab}
+Freight: ${base}
+War Surcharge: ${war}
+GST (18%): ${gst}
+Total Payable: ₹${total}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('copied'); btn.textContent = '✓';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋'; }, 2200);
+    showToast('Rate copied to clipboard!');
+  });
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+document.getElementById('slab-select').addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+
+/* ── ADMIN PANEL ── */
+function openAdminModal() {
+  document.getElementById('admin-overlay').classList.add('open');
+  document.getElementById('admin-login-form').style.display = 'block';
+  document.getElementById('admin-panel').classList.remove('open');
+  document.getElementById('admin-id').value = '';
+  document.getElementById('admin-pass').value = '';
+  document.getElementById('admin-login-err').classList.remove('show');
+  document.getElementById('admin-id').classList.remove('error');
+  document.getElementById('admin-pass').classList.remove('error');
+  setTimeout(() => document.getElementById('admin-id').focus(), 100);
+}
+
+function closeAdminModal() { document.getElementById('admin-overlay').classList.remove('open'); }
+
+function adminLogin() {
+  const id   = document.getElementById('admin-id').value.trim();
+  const pass = document.getElementById('admin-pass').value;
+  const err  = document.getElementById('admin-login-err');
+  if (id === 'Canada_Rates' && pass === 'rohan_canada') {
+    document.getElementById('admin-login-form').style.display = 'none';
+    document.getElementById('admin-panel').classList.add('open');
+    err.classList.remove('show');
+    document.getElementById('admin-json-editor').value = JSON.stringify(RATE_CARD, null, 2);
+    document.getElementById('admin-surcharge-input').value = _currentSurcharge;
+  } else {
+    err.classList.add('show');
+    document.getElementById('admin-id').classList.add('error');
+    document.getElementById('admin-pass').classList.add('error');
+  }
+}
+
+document.getElementById('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
+
+function handleAdminFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('admin-json-editor').value = e.target.result;
+    const st = document.getElementById('admin-status');
+    st.textContent = 'File loaded. Click Apply Rates to activate.';
+    st.className = 'admin-status success';
+  };
+  reader.onerror = function() {
+    const st = document.getElementById('admin-status');
+    st.textContent = 'Failed to read file.';
+    st.className = 'admin-status error';
+  };
+  reader.readAsText(file);
+}
+
+function applyCustomRates() {
+  const txt    = document.getElementById('admin-json-editor').value.trim();
+  const status = document.getElementById('admin-status');
+  try {
+    const parsed = JSON.parse(txt);
+    if (typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Must be a JSON object');
+    const keys = Object.keys(parsed);
+    if (keys.length === 0) throw new Error('Rate card is empty');
+    if (typeof parsed[keys[0]] !== 'object') throw new Error('Invalid rate card structure');
+    RATE_CARD = parsed;
+    localStorage.setItem('xindus_custom_rates', JSON.stringify(parsed));
+    document.getElementById('custom-rates-badge').style.display = 'inline-flex';
+    status.textContent = 'Custom rates applied and saved! ' + keys.length + ' slabs loaded.';
+    status.className = 'admin-status success';
+    showToast('Custom rates activated!');
+  } catch(e) {
+    status.textContent = 'Invalid JSON: ' + e.message;
+    status.className = 'admin-status error';
+  }
+}
+
+function resetToDefaultRates() {
+  RATE_CARD = HARDCODED_RATE_CARD;
+  localStorage.removeItem('xindus_custom_rates');
+  document.getElementById('custom-rates-badge').style.display = 'none';
+  document.getElementById('admin-json-editor').value = JSON.stringify(RATE_CARD, null, 2);
+  const status = document.getElementById('admin-status');
+  status.textContent = 'Rates reset to default hardcoded values.';
+  status.className = 'admin-status success';
+  showToast('Default rates restored');
+}
+
+document.getElementById('admin-overlay').addEventListener('click', function(e) { if (e.target === this) closeAdminModal(); });
+</script>
+</body>
+</html>

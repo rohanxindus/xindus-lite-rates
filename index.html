@@ -791,34 +791,32 @@ function calculate() {
 
 function recalcBreakdown() {
   if (!_currentCalc) return;
-  const { baseRatePerKg, isPerKg, slabLabel, slabMidpoint } = _currentCalc;
+  const { baseRatePerKg, isPerKg, slabMidpoint } = _currentCalc;
   const surchargeRate = _currentSurcharge || 75;
   const csbOn = document.getElementById('csb-toggle').checked;
 
-  // 1. Get the weight entered by customer for the Surcharge (Unchanged)
+  // 1. Get the weight entered by customer (Actual or Volumetric)
   const enteredWt = parseFloat(document.getElementById('actual-weight').value);
-  const weightForSurcharge = (!isNaN(enteredWt) && enteredWt > 0) ? enteredWt : slabMidpoint;
+  const weightForCalc = (!isNaN(enteredWt) && enteredWt > 0) ? enteredWt : slabMidpoint;
 
   let baseFreight, warSurcharge;
 
   if (isPerKg) {
-    // 2. NEW FREIGHT LOGIC: Calculate based on the Upper Limit of the slab
-    // Example: "6-7" becomes 7
-    const parts = slabLabel.split('-');
-    const upperLimit = parts.length > 1 ? parseFloat(parts[1]) : parseFloat(parts[0]);
+    // 2. FREIGHT LOGIC: Simple multiplication of ENTERED weight × Rate
+    baseFreight = baseRatePerKg * weightForCalc;
     
-    baseFreight = baseRatePerKg * upperLimit;
-    
-    // 3. SURCHARGE LOGIC: Stays based on what the customer entered
-    warSurcharge = surchargeRate * weightForSurcharge;
+    // 3. SURCHARGE LOGIC: Also based on entered weight
+    warSurcharge = surchargeRate * weightForCalc;
 
     document.getElementById('r-rate-per-kg').textContent = '₹' + formatNum(baseRatePerKg) + '/kg';
-    document.getElementById('base-label').innerHTML = `<span class="dot"></span>Freight`;
+    
+    // Keep the label clean as you requested earlier
+    document.getElementById('base-label').innerHTML = '<span class="dot"></span>Base Freight';
   } else {
-    // Logic for Flat Rates (below 4.75kg)
+    // Logic for Flat Rates (4.75kg and below)
     baseFreight = baseRatePerKg;
-    warSurcharge = surchargeRate * weightForSurcharge;
-    document.getElementById('base-label').innerHTML = '<span class="dot"></span>Base Freight Rate';
+    warSurcharge = surchargeRate * weightForCalc;
+    document.getElementById('base-label').innerHTML = '<span class="dot"></span>Base Freight';
   }
 
   const csbExtra = csbOn ? 50 : 0;
@@ -826,7 +824,7 @@ function recalcBreakdown() {
   const gst      = subtotal * 0.18;
   const total    = subtotal + gst;
 
-  // Update UI (Unchanged)
+  // Update UI Elements
   document.getElementById('r-base').textContent    = '₹' + formatNum(baseFreight);
   document.getElementById('r-war').textContent     = '₹' + formatNum(warSurcharge);
   document.getElementById('row-csb').style.display = csbExtra ? 'flex' : 'none';
@@ -840,7 +838,7 @@ function recalcBreakdown() {
 
   document.getElementById('gst-note').textContent = '* GST @ 18% applicable on freight + surcharges' + (csbOn ? ' · CSB-5 clearance ₹50 included' : '');
 
-  // Keep your volumetric logic active
+  // Keep volumetric logic active
   calcVolumetric();
 }
 

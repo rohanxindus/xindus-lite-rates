@@ -769,8 +769,22 @@ function calculate() {
     document.getElementById('r-entry').innerHTML = '<span class="entry-pill">✈ ' + (airportNames[zoneData.entry] || zoneData.entry) + '</span>';
     document.getElementById('r-slab').textContent  = slabVal + ' kg';
 
-    _currentCalc = { baseRatePerKg: baseRate, isPerKg, slabLabel: slabVal, slabMidpoint: getSlabMidpoint(slabVal) };
+    // Calculate Volumetric Weight: (L*W*H)/5000
+    const l = parseFloat(document.getElementById('vol-l').value) || 0;
+    const w = parseFloat(document.getElementById('vol-b').value) || 0;
+    const h = parseFloat(document.getElementById('vol-h').value) || 0;
+    const volWeight = (l * w * h) / 5000;
+    const actualWt = parseFloat(document.getElementById('actual-weight').value) || 0;
 
+    // The Chargeable Weight is the higher of the two
+    const finalWeight = Math.max(actualWt, volWeight, getSlabMidpoint(slabVal));
+
+    _currentCalc = { 
+      baseRatePerKg: baseRate, 
+      isPerKg, 
+      slabLabel: slabVal, 
+      slabMidpoint: finalWeight // This now carries the higher weight to the breakdown
+    };
     document.getElementById('csb-toggle-row').style.display = 'flex';
     document.getElementById('vol-checker').style.display     = isPerKg ? 'block' : 'none';
     document.getElementById('row-rate-per-kg').style.display = isPerKg ? 'flex' : 'none';

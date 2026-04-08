@@ -813,7 +813,7 @@ function recalcBreakdown() {
     warSurcharge = surchargeRate * weightForSurcharge;
 
     document.getElementById('r-rate-per-kg').textContent = '₹' + formatNum(baseRatePerKg) + '/kg';
-    document.getElementById('base-label').innerHTML = `<span class="dot"></span>Freight (${formatNum(baseRatePerKg)} × ${upperLimit} kg slab limit)`;
+    document.getElementById('base-label').innerHTML = `<span class="dot"></span>Freight`;
   } else {
     // Logic for Flat Rates (below 4.75kg)
     baseFreight = baseRatePerKg;

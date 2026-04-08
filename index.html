@@ -375,17 +375,20 @@ body{font-family:var(--sans);min-height:100vh;background:var(--blue-deep);overfl
           </div>
           <div class="vol-body" id="vol-body">
             <div class="vol-inputs">
-              <div class="vol-field"><label for="vol-l">Length (cm)</label><input type="number" id="vol-l" class="vol-input" placeholder="L" min="0" step="0.1" oninput="calcVolumetric()"/></div>
-              <div class="vol-field"><label for="vol-b">Breadth (cm)</label><input type="number" id="vol-b" class="vol-input" placeholder="B" min="0" step="0.1" oninput="calcVolumetric()"/></div>
-              <div class="vol-field"><label for="vol-h">Height (cm)</label><input type="number" id="vol-h" class="vol-input" placeholder="H" min="0" step="0.1" oninput="calcVolumetric()"/></div>
+              <div class="vol-field"><label for="vol-l">Length (cm)</label><input type="number" id="vol-l" class="vol-input" placeholder="L" min="0" step="0.1"/></div>
+              <div class="vol-field"><label for="vol-b">Breadth (cm)</label><input type="number" id="vol-b" class="vol-input" placeholder="B" min="0" step="0.1"/></div>
+              <div class="vol-field"><label for="vol-h">Height (cm)</label><input type="number" id="vol-h" class="vol-input" placeholder="H" min="0" step="0.1"/></div>
             </div>
-            <button type="button" onclick="calcVolumetric()" class="secondary-btn">
-              Calculate Volumetric Rate
+          
+            <button type="button" onclick="calcVolumetric()" class="secondary-btn" style="width: 100%; margin: 10px 0; padding: 10px; cursor: pointer; background: #eab308; color: #000; border: none; border-radius: 4px; font-weight: bold;">
+              Check Volumetric Rate
             </button>
+          
             <div class="vol-result-grid" id="vol-result-grid" style="display:none">
               <div class="vol-chip"><div class="vol-chip-label">Gross Weight</div><div class="vol-chip-val" id="vol-gross-disp">&#8212;</div></div>
               <div class="vol-chip"><div class="vol-chip-label">Volumetric Wt.</div><div class="vol-chip-val" id="vol-vol-disp">&#8212;</div></div>
               <div class="vol-chip"><div class="vol-chip-label">Chargeable Wt.</div><div class="vol-chip-val highlight" id="vol-charge-disp">&#8212;</div></div>
+            </div>
             </div>
             <div class="vol-warning" id="vol-warning">&#9888;&#65039; Volumetric weight exceeds gross weight. Chargeable weight is <strong id="vol-charge-bold">&#8212;</strong> kg.</div>
             <div class="vol-recalc" id="vol-recalc">&#8505;&#65039; Recalculated rate using chargeable weight: <strong id="vol-recalc-val">&#8212;</strong> &middot; Total Payable: <strong id="vol-recalc-total">&#8212;</strong></div>
@@ -869,43 +872,49 @@ function toggleVolChecker() {
 
 function calcVolumetric() {
   if (!_currentCalc || !_currentCalc.isPerKg) return;
+
   const L = parseFloat(document.getElementById('vol-l').value);
   const B = parseFloat(document.getElementById('vol-b').value);
   const H = parseFloat(document.getElementById('vol-h').value);
-  if (isNaN(L)||isNaN(B)||isNaN(H)||L<=0||B<=0||H<=0) {
-    document.getElementById('vol-result-grid').style.display = 'none';
-    document.getElementById('vol-warning').classList.remove('show');
-    document.getElementById('vol-recalc').classList.remove('show');
+  
+  // Important: Ensure this ID matches your top weight input (actual-weight)
+  const actualWt = parseFloat(document.getElementById('actual-weight').value) || 0;
+
+  if (isNaN(L) || isNaN(B) || isNaN(H) || L <= 0 || B <= 0 || H <= 0) {
+    alert("Please enter Length, Breadth, and Height");
     return;
   }
-  const grossWtRaw = parseFloat(document.getElementById('gross-weight').value);
-  const grossWt    = (!isNaN(grossWtRaw) && grossWtRaw > 0) ? grossWtRaw : _currentCalc.slabMidpoint;
-  const volWt      = (L * B * H) / 5000;
-  const chargeWt   = Math.max(grossWt, volWt);
 
-  document.getElementById('vol-gross-disp').textContent  = grossWt.toFixed(2) + ' kg';
-  document.getElementById('vol-vol-disp').textContent    = volWt.toFixed(2) + ' kg';
-  document.getElementById('vol-charge-disp').textContent = chargeWt.toFixed(2) + ' kg';
+  const volWt = (L * B * H) / 5000;
+  const chargeWt = Math.max(actualWt, volWt);
+
+  // Show the results section
   document.getElementById('vol-result-grid').style.display = 'grid';
+  document.getElementById('vol-gross-disp').textContent = actualWt.toFixed(2) + ' kg';
+  document.getElementById('vol-vol-disp').textContent = volWt.toFixed(2) + ' kg';
+  document.getElementById('vol-charge-disp').textContent = chargeWt.toFixed(2) + ' kg';
 
-  if (volWt > grossWt) {
-    // ... your existing display code ...
-    
-    // ADD THIS LINE: Update the main calculation object to use the higher weight
+  if (volWt > actualWt) {
+    // 1. Update the 'SlabMidpoint' so the main bill knows to use the higher weight
     _currentCalc.slabMidpoint = chargeWt; 
     
-    // CALL THIS: Refresh the main breakdown table with the higher weight
-    recalcBreakdown(); 
-
+    // 2. Show the warning and internal recalc
+    document.getElementById('vol-charge-bold').textContent = chargeWt.toFixed(2);
+    document.getElementById('vol-warning').classList.add('show');
     document.getElementById('vol-recalc').classList.add('show');
+
+    // Update the mini-total inside the volumetric box
+    const newBase = _currentCalc.baseRatePerKg * chargeWt;
+    document.getElementById('vol-recalc-total').textContent = '₹' + newBase.toLocaleString();
   } else {
-    // If actual weight is higher again, reset to the entered weight
-    _currentCalc.slabMidpoint = grossWt;
-    recalcBreakdown();
-    
+    // If actual weight is higher, reset the math to actual weight
+    _currentCalc.slabMidpoint = actualWt;
     document.getElementById('vol-warning').classList.remove('show');
     document.getElementById('vol-recalc').classList.remove('show');
   }
+
+  // 3. CRITICAL: Update the main bill at the top of the page
+  recalcBreakdown();
 }
 
 function formatNum(n) { return n.toFixed(2).replace(/B(?=(d{3})+(?!d))/g, ','); }

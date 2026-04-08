@@ -873,47 +873,47 @@ function toggleVolChecker() {
 function calcVolumetric() {
   if (!_currentCalc || !_currentCalc.isPerKg) return;
 
-  const L = parseFloat(document.getElementById('vol-l').value);
-  const B = parseFloat(document.getElementById('vol-b').value);
-  const H = parseFloat(document.getElementById('vol-h').value);
-  
-  // Important: Ensure this ID matches your top weight input (actual-weight)
+  // Get values
+  const lVal = document.getElementById('vol-l').value;
+  const bVal = document.getElementById('vol-b').value;
+  const hVal = document.getElementById('vol-h').value;
+
+  // SILENT CHECK: If any field is empty, just stop here without a pop-up
+  if (!lVal || !bVal || !hVal) {
+    return; 
+  }
+
+  const L = parseFloat(lVal);
+  const B = parseFloat(bVal);
+  const H = parseFloat(hVal);
   const actualWt = parseFloat(document.getElementById('actual-weight').value) || 0;
 
-  if (isNaN(L) || isNaN(B) || isNaN(H) || L <= 0 || B <= 0 || H <= 0) {
-    alert("Please enter Length, Breadth, and Height");
-    return;
-  }
+  // Logic Check: Only proceed if numbers are valid and greater than 0
+  if (L <= 0 || B <= 0 || H <= 0) return;
 
   const volWt = (L * B * H) / 5000;
   const chargeWt = Math.max(actualWt, volWt);
 
-  // Show the results section
+  // Update UI and Calculations
   document.getElementById('vol-result-grid').style.display = 'grid';
   document.getElementById('vol-gross-disp').textContent = actualWt.toFixed(2) + ' kg';
   document.getElementById('vol-vol-disp').textContent = volWt.toFixed(2) + ' kg';
   document.getElementById('vol-charge-disp').textContent = chargeWt.toFixed(2) + ' kg';
 
   if (volWt > actualWt) {
-    // 1. Update the 'SlabMidpoint' so the main bill knows to use the higher weight
     _currentCalc.slabMidpoint = chargeWt; 
-    
-    // 2. Show the warning and internal recalc
     document.getElementById('vol-charge-bold').textContent = chargeWt.toFixed(2);
     document.getElementById('vol-warning').classList.add('show');
     document.getElementById('vol-recalc').classList.add('show');
-
-    // Update the mini-total inside the volumetric box
+    
     const newBase = _currentCalc.baseRatePerKg * chargeWt;
     document.getElementById('vol-recalc-total').textContent = '₹' + newBase.toLocaleString();
   } else {
-    // If actual weight is higher, reset the math to actual weight
     _currentCalc.slabMidpoint = actualWt;
     document.getElementById('vol-warning').classList.remove('show');
     document.getElementById('vol-recalc').classList.remove('show');
   }
 
-  // 3. CRITICAL: Update the main bill at the top of the page
   recalcBreakdown();
 }
 
